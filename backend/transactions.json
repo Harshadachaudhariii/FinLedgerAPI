@@ -1,0 +1,196 @@
+{
+  "users": {
+    "u_001": {
+      "username": "alice_finance",
+      "password_hash": "hashed_password_123",
+      "created_at": "2026-01-01T00:00:00Z"
+    },
+    "u_002": {
+      "username": "bob_budgets",
+      "password_hash": "hashed_password_456",
+      "created_at": "2026-01-05T00:00:00Z"
+    }
+  },
+  "transactions": {
+    "t_1001": {
+      "user_id": "u_001",
+      "type": "income",
+      "category": "Salary",
+      "amount": 4500.00,
+      "currency": "USD",
+      "dates": "2026-09-01",
+      "description": "Monthly salary"
+    },
+    "t_1002": {
+      "user_id": "u_001",
+      "type": "expense",
+      "category": "Rent",
+      "amount": 1200.00,
+      "currency": "USD",
+      "dates": "2026-09-02",
+      "description": "Apartment rent"
+    },
+    "t_1003": {
+      "user_id": "u_001",
+      "type": "expense",
+      "category": "Food",
+      "amount": 45.50,
+      "currency": "USD",
+      "dates": "2026-09-03",
+      "description": "Weekly groceries"
+    },
+    "t_1004": {
+      "user_id": "u_001",
+      "type": "expense",
+      "category": "Transport",
+      "amount": 15.00,
+      "currency": "USD",
+      "dates": "2026-09-05",
+      "description": "Train pass"
+    },
+    "t_1005": {
+      "user_id": "u_001",
+      "type": "expense",
+      "category": "Utilities",
+      "amount": 85.20,
+      "currency": "USD",
+      "dates": "2026-09-06",
+      "description": "Electricity bill"
+    },
+    "t_1006": {
+      "user_id": "u_001",
+      "type": "income",
+      "category": "Freelance",
+      "amount": 300.00,
+      "currency": "USD",
+      "dates": "2026-09-10",
+      "description": "Web design project"
+    },
+    "t_1007": {
+      "user_id": "u_001",
+      "type": "expense",
+      "category": "Food",
+      "amount": 22.00,
+      "currency": "USD",
+      "dates": "2026-09-12",
+      "description": "Dinner with friends"
+    },
+    "t_1008": {
+      "user_id": "u_001",
+      "type": "expense",
+      "category": "Entertainment",
+      "amount": 15.99,
+      "currency": "USD",
+      "dates": "2026-09-15",
+      "description": "Streaming subscription"
+    },
+    "t_1009": {
+      "user_id": "u_001",
+      "type": "expense",
+      "category": "Health",
+      "amount": 40.00,
+      "currency": "USD",
+      "dates": "2026-09-18",
+      "description": "Gym membership"
+    },
+    "t_1010": {
+      "user_id": "u_001",
+      "type": "expense",
+      "category": "Food",
+      "amount": 12.50,
+      "currency": "USD",
+      "dates": "2026-09-19",
+      "description": "Coffee and snacks"
+    },
+    "t_2001": {
+      "user_id": "u_002",
+      "type": "income",
+      "category": "Salary",
+      "amount": 3800.00,
+      "currency": "USD",
+      "dates": "2026-09-01",
+      "description": "Monthly salary"
+    },
+    "t_2002": {
+      "user_id": "u_002",
+      "type": "expense",
+      "category": "Rent",
+      "amount": 950.00,
+      "currency": "USD",
+      "dates": "2026-09-02",
+      "description": "Room rent"
+    },
+    "t_2003": {
+      "user_id": "u_002",
+      "type": "expense",
+      "category": "Food",
+      "amount": 120.00,
+      "currency": "USD",
+      "dates": "2026-09-04",
+      "description": "Bulk grocery shopping"
+    },
+    "t_2004": {
+      "user_id": "u_002",
+      "type": "expense",
+      "category": "Transport",
+      "amount": 45.00,
+      "currency": "USD",
+      "dates": "2026-09-05",
+      "description": "Gas for car"
+    },
+    "t_2005": {
+      "user_id": "u_002",
+      "type": "income",
+      "category": "Gift",
+      "amount": 100.00,
+      "currency": "USD",
+      "dates": "2026-09-08",
+      "description": "Birthday gift"
+    },
+    "t_2006": {
+      "user_id": "u_002",
+      "type": "expense",
+      "category": "Utilities",
+      "amount": 110.00,
+      "currency": "USD",
+      "dates": "2026-09-10",
+      "description": "Internet and phone"
+    },
+    "t_2007": {
+      "user_id": "u_002",
+      "type": "expense",
+      "category": "Entertainment",
+      "amount": 60.00,
+      "currency": "USD",
+      "dates": "2026-09-13",
+      "description": "Concert tickets"
+    },
+    "t_2008": {
+      "user_id": "u_002",
+      "type": "expense",
+      "category": "Food",
+      "amount": 35.00,
+      "currency": "USD",
+      "dates": "2026-09-14",
+      "description": "Takeout pizza"
+    },
+    "t_2009": {
+      "user_id": "u_002",
+      "type": "expense",
+      "category": "Shopping",
+      "amount": 89.99,
+      "currency": "USD",
+      "dates": "2026-09-17",
+      "description": "New shoes"
+    },
+    "t_2010": {
+      "user_id": "u_002",
+      "type": "expense",
+      "category": "Health",
+      "amount": 25.00,
+      "currency": "USD",
+      "dates": "2026-09-20",
+      "description": "Pharmacy"
+    }
+  }
+}
