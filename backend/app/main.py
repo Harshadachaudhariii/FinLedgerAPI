@@ -1,19 +1,22 @@
-from fastapi import FastAPI, HTTPException, Path, Query , Header
+from fastapi import FastAPI, HTTPException, Path, Query , Header, APIRouter
 from datetime import date
 import json
 from pydantic import BaseModel, Field
 from typing import Optional, Annotated, List,Literal
 from fastapi.responses import JSONResponse
 from enum import Enum
+from budget_system import router as budget_router
 
 app = FastAPI()
+app.include_router(budget_router, prefix="/budgets", tags=["Budgets"])
+
 def load_data():
-    with open("/data/transactions.json", "r") as f:
+    with open("./data/transactions.json", "r") as f:
         data = json.load(f)
         return data
     
 def save_data(data):
-    with open('transactions.json','w') as f:
+    with open('./data/transactions.json','w') as f:
         json.dump(data, f, indent=4)
 
 class TransactionPaymentMethod(str, Enum):
@@ -228,8 +231,8 @@ def summary_transactions(start_date: Optional[date] = Query(None, description="S
     return JSONResponse(status_code=200, content={
         "user_id": user_id,
         "period":{
-            "start_date":start_date,
-            "end_date":end_date
+            "start_date": start_date.isoformat() if start_date else None,
+        "end_date": end_date.isoformat() if end_date else None
         },
         "total_income": total_income,
         "total_expense": total_expense,
@@ -281,8 +284,8 @@ def summary_by_category_transaction(start_date: Optional[date] = Query(None, des
     return JSONResponse(status_code=200, content={
         "user_id":user_id,
         "period":{
-            "start_date":start_date,
-            "end_date":end_date
+            "start_date": start_date.isoformat() if start_date else None,
+        "end_date": end_date.isoformat() if end_date else None
         },
         "total_expenses":total_expense,
         "breakdown":breakdown
@@ -343,8 +346,8 @@ def summary_monthly_transaction(start_date: Optional[date] = Query(None, descrip
     return JSONResponse(status_code=200, content={
         "user_id": user_id,
         "period": {
-                "start_date": start_date,
-                "end_date": end_date
+                "start_date": start_date.isoformat() if start_date else None,
+                "end_date": end_date.isoformat() if end_date else None
             },
         "monthly_summary":monthly_summary
     })
