@@ -8,7 +8,7 @@ from enum import Enum
 
 app = FastAPI()
 def load_data():
-    with open("transactions.json", "r") as f:
+    with open("/data/transactions.json", "r") as f:
         data = json.load(f)
         return data
     
@@ -157,7 +157,7 @@ def filter_transaction(type: Optional[Literal["income", "expense"]] = Query(None
     end_date: Optional[date] = Query(None, description="End date for filtering"),
     user_id: str = Header(...)):
     
-    if start_date and end_date is not None:
+    if (start_date) and (end_date is not None):
         if end_date <start_date:
             raise HTTPException(status_code=400, detail="end_date cannot be before start date")
         
@@ -294,7 +294,60 @@ def summary_monthly_transaction(start_date: Optional[date] = Query(None, descrip
     user_id:str=Header(...)):
     data = load_data()
     
-    pass
+    monthly_data ={}
+
+    for transaction_id, transaction_info in data["transactions"].items():
+        if transaction_info["user_id"] != user_id:
+            continue
+        transactions_date = date.fromisoformat(transaction_info["dates"])
+        if start_date is not None and transactions_date < start_date:
+            continue
+                
+        if end_date is not None and transactions_date > end_date:
+            continue
+        
+        month = transactions_date.strftime("%Y-%m")
+        # Create month if it doesn't exist
+        if month not in monthly_data:
+            monthly_data[month] = {
+                "income": 0.0,
+                "expense": 0.0,
+                "count": 0
+            }
+        
+        if transaction_info["type"] == "income":
+            monthly_data[month]["income"] += transaction_info["amount"]
+        if transaction_info["type"] == "expense":
+            monthly_data[month]["expense"] += transaction_info["amount"]
+        
+        monthly_data[month]["count"] += 1
+        # Format monthly response
+    monthly_summary = []
+
+    for month, month_data in monthly_data.items():
+
+        income = round(month_data["income"], 2)
+        expense = round(month_data["expense"], 2)
+        net_balance = round(income - expense, 2)
+
+        monthly_summary.append({
+            "month": month,
+            "income": income,
+            "expense": expense,
+            "net_balance": net_balance,
+            "transactions_count": month_data["count"]
+        })
+    monthly_summary.sort(key=lambda x: x["month"])
+
+    
+    return JSONResponse(status_code=200, content={
+        "user_id": user_id,
+        "period": {
+                "start_date": start_date,
+                "end_date": end_date
+            },
+        "monthly_summary":monthly_summary
+    })
 
 @app.get("/transactions/{transaction_id}")
 def view_transaction(transaction_id: str,user_id: str = Header(...)):
