@@ -80,8 +80,7 @@ class TransactionUpdate(BaseModel):
     payment_method: Optional[TransactionPaymentMethod] =None
     status: Optional[TransactionStatus]=None
     notes:Optional[str]=None
-    
-    
+        
 class User(BaseModel):
     username: str=Field(..., description="Username of the user")
     password: str=Field(..., description="Password of the user")
@@ -154,7 +153,14 @@ def view_transactions(user_id: str = Header(...)):
 @app.get("/transactions/filter")
 def filter_transaction(type: Optional[Literal["income", "expense"]] = Query(None),
     category: Optional[TransactionCategory] = Query(None),
+    start_date: Optional[date] = Query(None, description="Start date for filtering"),
+    end_date: Optional[date] = Query(None, description="End date for filtering"),
     user_id: str = Header(...)):
+    
+    if start_date and end_date is not None:
+        if end_date <start_date:
+            raise HTTPException(status_code=400, detail="end_date cannot be before start date")
+        
     data = load_data()
     filter_criteria = {}
     if type is not None:
@@ -163,6 +169,7 @@ def filter_transaction(type: Optional[Literal["income", "expense"]] = Query(None
     if category is not None:
         filter_criteria["category"] = category
         
+    
     filtered_data = {}
     for transaction_id , transaction_info in data["transactions"].items():
         # Check ownership first
@@ -173,10 +180,121 @@ def filter_transaction(type: Optional[Literal["income", "expense"]] = Query(None
             if transaction_info.get(key) != value:
                 match = False
                 break
+        if not match:
+            continue
+        transaction_date= date.fromisoformat(transaction_info["dates"])
+        if start_date is not None and transaction_date< start_date:
+            match =False
+            
+        if end_date is not None and transaction_date > end_date:
+            match =False
+            
         if match:
             filtered_data[transaction_id] = transaction_info
     
     return filtered_data
+
+@app.get("/transactions/summary/overview")
+def summary_transactions(start_date: Optional[date] = Query(None, description="Start date for filtering"),
+    end_date: Optional[date] = Query(None, description="End date for filtering"),
+    user_id:str=Header(...)):
+    data = load_data()
+    
+    total_income = 0.0
+    total_expense = 0.0
+    transaction_count = 0
+    for transaction_id, transaction_info in data["transactions"].items():
+        if transaction_info["user_id"] != user_id:
+            continue
+        
+        transactions_date = date.fromisoformat(transaction_info["dates"])
+        if start_date is not None and transactions_date < start_date:
+            continue
+
+        if end_date is not None and transactions_date > end_date:
+            continue
+        
+        transaction_count += 1
+        
+        if transaction_info["type"] == "income":
+            total_income += transaction_info["amount"]
+        if transaction_info["type"] == "expense":
+            total_expense += transaction_info["amount"]
+        
+    net_balance = round(total_income - total_expense, 2)
+    total_income = round(total_income, 2)
+    total_expense = round(total_expense, 2)
+        
+    return JSONResponse(status_code=200, content={
+        "user_id": user_id,
+        "period":{
+            "start_date":start_date,
+            "end_date":end_date
+        },
+        "total_income": total_income,
+        "total_expense": total_expense,
+        "net_balance": net_balance,
+        "transaction_count": transaction_count,
+        "currency": "USD"
+    })
+
+@app.get("/transactions/summary/by-category")   
+def summary_by_category_transaction(start_date: Optional[date] = Query(None, description="Start date for filtering"),
+    end_date: Optional[date] = Query(None, description="End date for filtering"),
+    user_id:str=Header(...)):
+    
+    data = load_data()
+    
+    category_totals = {}
+    total_expense=0.0
+    for transaction_id, transaction_info in data["transactions"].items():
+        if transaction_info["user_id"] != user_id:
+            continue
+        transactions_date = date.fromisoformat(transaction_info["dates"])
+        if start_date is not None and transactions_date < start_date:
+            continue
+        
+        if end_date is not None and transactions_date > end_date:
+            continue
+        
+        if transaction_info["type"] == "expense":
+            category = transaction_info["category"]
+            amount = transaction_info["amount"]
+            
+            total_expense += amount
+            if category in category_totals:
+                category_totals[category] += amount
+            else:
+                category_totals[category] = amount
+     
+    total_expense = round(total_expense, 2)
+
+    breakdown=[]
+    for category, amount in category_totals.items():
+        percentage= (amount/total_expense) *100
+        breakdown.append({
+            "category":category,
+            "amount":amount,
+            "percentage":round(percentage,2)
+        })
+
+    return JSONResponse(status_code=200, content={
+        "user_id":user_id,
+        "period":{
+            "start_date":start_date,
+            "end_date":end_date
+        },
+        "total_expenses":total_expense,
+        "breakdown":breakdown
+    })
+    
+@app.get("/transactions/summary/monthly")
+def summary_monthly_transaction(start_date: Optional[date] = Query(None, description="Start date for filtering"),
+    end_date: Optional[date] = Query(None, description="End date for filtering"),
+    user_id:str=Header(...)):
+    data = load_data()
+    
+    pass
 
 @app.get("/transactions/{transaction_id}")
 def view_transaction(transaction_id: str,user_id: str = Header(...)):
@@ -195,7 +313,6 @@ def view_transaction(transaction_id: str,user_id: str = Header(...)):
         )
 
     return transaction
-
 
 @app.post("/users/register")
 def create_new_user(users: User):
