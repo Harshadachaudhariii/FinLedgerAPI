@@ -4,90 +4,18 @@ import json
 from pydantic import BaseModel, Field
 from typing import Optional, Annotated, List,Literal
 from fastapi.responses import JSONResponse
-from enum import Enum
-from budget_system import router as budget_router
+from routes.budget_system import router as budget_router
+from routes.analytics import router as analytics_router
+from app.utils.data import load_data, save_data
+from app.enums.transaction import *
+from app.model.user import *
+from app.model.transactions import *
 
 app = FastAPI()
 app.include_router(budget_router, prefix="/budgets", tags=["Budgets"])
-
-def load_data():
-    with open("./data/transactions.json", "r") as f:
-        data = json.load(f)
-        return data
+app.include_router(analytics_router, prefix="/analytics", tags=["Analytics"])
     
-def save_data(data):
-    with open('./data/transactions.json','w') as f:
-        json.dump(data, f, indent=4)
-
-class TransactionPaymentMethod(str, Enum):
-    DebitCard= "Debit Card"
-    CreditCard= "Credit Card"
-    UPI="UPI"
-    CASH="Cash"
-    BankTransfer="Bank Transfer"
-
-class TransactionCategory(str, Enum):
-    FOOD="Food"
-    TRANSPORT="Transport"
-    SALARY="Salary"
-    RENT ="Rent"
-    UTILITIES="Utilities"
-    ENTERTAINMENT="Entertainment"
-    HEALTH="Health"
-    FREELANCE="Freelance"
-    GIFT="Gift"
-    SHOPPING="Shopping"
-    BONUS="Bonus"
-    EDUCATION="Education"
-    OTHER="Other"
-
-class TransactionMerchant(str, Enum):
-    EmployerPayroll ="Employer Payroll"
-    ApartmentManagement="Apartment Management"
-    LocalGroceryRestaurant= "Local Grocery & Restaurant"
-    LocalTransport="Local Transport"
-    UtilityProvider ="Utility Provider"
-    FreelanceClient ="Freelance Client"
-    EntertainmentService ="Entertainment Service"
-    HealthcareProvider ="Healthcare Provider"
-    RetailStore= "Retail Store"
-    OnlineLearningPlatform ="Online Learning Platform"
-    FAMILY = "Family"
-
-class TransactionStatus(str, Enum):
-    COMPLETED = "completed"  
-    PENDING="pending"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
-    
-class Transaction(BaseModel):
-    type: Annotated[Literal["income", "expense"], Field(..., description="Type of transaction: income or expense")]
-    category: Annotated[TransactionCategory, Field(..., description="Category of transaction")]
-    amount: float=Field(..., description="Amount of transaction", gt=0)
-    currency: str=Field(..., description="Currency of transaction")
-    dates: date=Field(..., description="Date of transaction")    
-    description: Optional[str]=Field(None, description="Description of transaction")
-    merchant: Annotated[Optional[str], Field(None, max_length=100, description="Description of where user spend money")]
-    payment_method: TransactionPaymentMethod=None
-    status: Optional[TransactionStatus]=None
-    notes:Optional[str]=None
-
-class TransactionUpdate(BaseModel):
-    type: Optional[Literal["income", "expense"]]=Field(None, description="Type of transaction: income or expense")
-    category: Optional[TransactionCategory]=Field(None, description="Category of transaction")
-    amount: Optional[float]=Field(None, description="Amount of transaction", gt=0)
-    currency: Optional[str]=Field(None, description="Currency of transaction")
-    dates: Optional[date]=Field(None, description="Date of transaction")    
-    description: Optional[str]=Field(None, description="Description of transaction")
-    merchant: Annotated[Optional[TransactionMerchant], Field(None,max_length=100, description="Description of where user spend money")]
-    payment_method: Optional[TransactionPaymentMethod] =None
-    status: Optional[TransactionStatus]=None
-    notes:Optional[str]=None
-        
-class User(BaseModel):
-    username: str=Field(..., description="Username of the user")
-    password: str=Field(..., description="Password of the user")
-    created_at: Optional[date]=Field(default=date.today(), description="Date of user creation")
+ 
 
 def generate_user_id(data) -> str:
     if not data:
