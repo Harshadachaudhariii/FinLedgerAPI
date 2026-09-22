@@ -21,13 +21,13 @@ class Budget(BaseModel):
     created_at:date
     
 class BudgetUpdate(BaseModel):
-    user_id:Optional[str]
-    category:Optional[Annotated[TransactionCategory, Field(..., description="Category of transaction")]]
-    amount: Optional[float]=Field(...,description="Amount of transaction", gt=0)
-    period: Optional[Literal["monthly"]]
-    month: Optional[str] = Field(...,description="Month of transaction in YYYY-MM format",
+    user_id:Optional[str] =None
+    category:Optional[Annotated[TransactionCategory, Field(description="Category of transaction")]] =None
+    amount: Optional[float]=Field(description="Amount of transaction", gt=0)
+    period: Optional[Literal["monthly"]] =None
+    month: Optional[str] = Field(None,description="Month of transaction in YYYY-MM format",
             pattern=r"^\d{4}-(0[1-9]|1[0-2])$")
-    created_at:Optional[date]
+    created_at:Optional[date] =None
     
 class BudgetStatus(BaseModel):
     budget_id: str

@@ -1,11 +1,10 @@
 from fastapi import FastAPI, HTTPException, Path, Query , Header, APIRouter
 from datetime import date
 import json
-from pydantic import BaseModel, Field
 from typing import Optional, Annotated, List,Literal
 from fastapi.responses import JSONResponse
-from routes.budget_system import router as budget_router
-from routes.analytics import router as analytics_router
+from app.routes.budget_system import router as budget_router
+from app.routes.analytics import router as analytics_router
 from app.utils.data import load_data, save_data
 from app.enums.transaction import *
 from app.model.user import *
@@ -88,7 +87,7 @@ def filter_transaction(type: Optional[Literal["income", "expense"]] = Query(None
     end_date: Optional[date] = Query(None, description="End date for filtering"),
     user_id: str = Header(...)):
     
-    if (start_date) and (end_date is not None):
+    if start_date is not None and end_date is not None:
         if end_date <start_date:
             raise HTTPException(status_code=400, detail="end_date cannot be before start date")
         
@@ -325,9 +324,9 @@ def verify_user(users:User):
 @app.post("/transactions/create")
 def create_transactions(transactions:Transaction, user_id:str=Header(...)):
     data = load_data()
-    transactions_id = generate_transaction_id(data, user_id)
     if user_id not in data["users"]:
         raise HTTPException(status_code=404, detail="User ID not found.")
+    transactions_id = generate_transaction_id(data, user_id)
     transaction_data = transactions.model_dump(mode="json", exclude_unset=True)
     transaction_data["user_id"] = user_id
     data["transactions"][transactions_id]= transaction_data
@@ -352,7 +351,7 @@ def update_transaction(transaction_id: str,transaction:TransactionUpdate,user_id
     data["transactions"][transaction_id] = existing_transaction_info
     
     save_data(data)
-    return JSONResponse(status_code=201, content={"message":"Transaction updated successfully.", "user_id":user_id, "application":data["transactions"][transaction_id]})
+    return JSONResponse(status_code=200, content={"message":"Transaction updated successfully.", "user_id":user_id, "transaction":data["transactions"][transaction_id]})
     
 @app.delete("/transactions/delete/{transaction_id}")
 def delete_transaction(transaction_id:str, user_id:str=Header(...)):

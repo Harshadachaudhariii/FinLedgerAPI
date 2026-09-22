@@ -1,14 +1,13 @@
-from fastapi import FastAPI, HTTPException, Path, Query , Header
+from fastapi import FastAPI, HTTPException, Path, Query, Header, APIRouter
 from datetime import date
 import json
-from pydantic import BaseModel, Field
-from typing import Optional, Annotated, List,Literal
+from typing import Optional
 from fastapi.responses import JSONResponse
 from app.utils.data import load_data, save_data
 from app.model.budget import *
 from app.enums.budget import BudgetStatusType, TransactionCategory
 
-app = FastAPI()    
+router = APIRouter()    
 
 def generate_budget_id(data,user_id: str) -> str:
     numbers = []
@@ -50,7 +49,7 @@ def calculate_category_spending(data, user_id, category, month):
                     total_spent += transaction_info["amount"]
     return total_spent
 
-@app.get("/budgets")
+@router.get("")
 def get_budgets(user_id: str = Header(...), month: Optional[str] = Query(None)):
     data = load_data()
     budgets = []
@@ -63,7 +62,7 @@ def get_budgets(user_id: str = Header(...), month: Optional[str] = Query(None)):
         budgets.append(budgets_info)
     return budgets
         
-@app.get("/budgets/status")
+@router.get("/status")
 def get_budget_status(user_id: str = Header(...), month: Optional[str] = Query(None)):
     data = load_data()
     if month is None:
@@ -96,19 +95,21 @@ def get_budget_status(user_id: str = Header(...), month: Optional[str] = Query(N
                 budget_id=budgets_id,
                 category=budgets_info["category"],
                 month=month,
-                budgeted_amount=budgeted_amount,
+                budget_amount=budgeted_amount,
                 spent_amount=spent_amount,
-                remaining=remaining,
+                remaining_amount=remaining,
                 percentage_used=percentage_used,
                 status=status
             )
         )
     
     return JSONResponse(status_code=200, content={
-        "Budgets status": BudgetStatus
+        "user_id": user_id,
+        "month": month,
+        "Budgets status": [status.model_dump(mode="json") for status in budget_statuses]
     })
             
-@app.post("/budgets/create")
+@router.post("/create")
 def create_budget(budget: BudgetCreate, user_id: str = Header(...)):
     data = load_data()
     for budget_id, budget_info in data["budgets"].items():
@@ -125,7 +126,7 @@ def create_budget(budget: BudgetCreate, user_id: str = Header(...)):
     save_data(data)
     return JSONResponse(status_code=201, content={"message":"Budget created successfully.","user_id":user_id})
 
-@app.put("/budgets/update/{budget_id}")
+@router.put("/update/{budget_id}")
 def update_budget(budget_id: str, budget_update: BudgetUpdate, user_id: str = Header(...)):
     data = load_data()
     if budget_id not in data["budgets"]:
@@ -143,7 +144,7 @@ def update_budget(budget_id: str, budget_update: BudgetUpdate, user_id: str = He
     save_data(data)
     return JSONResponse(status_code=200, content={"message":"budgets updated successfully.", "user_id":user_id, "budgets":data["budgets"][budget_id]})
 
-@app.delete("/budgets/delete/{budget_id}")
+@router.delete("/delete/{budget_id}")
 def delete_budget(budget_id: str, user_id: str = Header(...)):
     data = load_data()
         

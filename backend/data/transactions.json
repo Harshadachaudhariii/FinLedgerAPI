@@ -2,12 +2,12 @@
     "users": {
         "u_001": {
             "username": "alice_finance",
-            "password_hash": "hashed_password_123",
+            "password": "hashed_password_123",
             "created_at": "2026-01-01T00:00:00Z"
         },
         "u_002": {
             "username": "bob_budgets",
-            "password_hash": "hashed_password_456",
+            "password": "hashed_password_456",
             "created_at": "2026-01-05T00:00:00Z"
         },
         "u_003": {
@@ -19,6 +19,11 @@
             "username": "John_toe",
             "password": "password_094",
             "created_at": "2026-09-21"
+        },
+        "u_005": {
+            "username": "harshada",
+            "password": "harshada03",
+            "created_at": "2026-09-23"
         }
     },
     "transactions": {
@@ -285,7 +290,7 @@
         "t_2001": {
             "user_id": "u_002",
             "type": "income",
-            "category": "Salary",
+            "category": "Rent",
             "amount": 3800.0,
             "currency": "USD",
             "dates": "2026-09-01",
@@ -648,133 +653,133 @@
         }
     },
     "budgets": {
-    "b_1001": {
-        "user_id": "u_001",
-        "category": "Rent",
-        "amount": 1200.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    },
-    "b_1002": {
-        "user_id": "u_001",
-        "category": "Food",
-        "amount": 200.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    },
-    "b_1003": {
-        "user_id": "u_001",
-        "category": "Transport",
-        "amount": 100.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    },
-    "b_1004": {
-        "user_id": "u_001",
-        "category": "Utilities",
-        "amount": 200.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    },
-    "b_1005": {
-        "user_id": "u_001",
-        "category": "Entertainment",
-        "amount": 100.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    },
-    "b_1006": {
-        "user_id": "u_001",
-        "category": "Health",
-        "amount": 100.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    },
-    "b_1007": {
-        "user_id": "u_001",
-        "category": "Shopping",
-        "amount": 200.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    },
-    "b_1008": {
-        "user_id": "u_001",
-        "category": "Education",
-        "amount": 250.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    },
-    "b_2001": {
-        "user_id": "u_002",
-        "category": "Rent",
-        "amount": 950.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    },
-    "b_2002": {
-        "user_id": "u_002",
-        "category": "Food",
-        "amount": 300.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    },
-    "b_2003": {
-        "user_id": "u_002",
-        "category": "Transport",
-        "amount": 150.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    },
-    "b_2004": {
-        "user_id": "u_002",
-        "category": "Utilities",
-        "amount": 200.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    },
-    "b_2005": {
-        "user_id": "u_002",
-        "category": "Entertainment",
-        "amount": 100.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    },
-    "b_2006": {
-        "user_id": "u_002",
-        "category": "Health",
-        "amount": 100.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    },
-    "b_2007": {
-        "user_id": "u_002",
-        "category": "Shopping",
-        "amount": 250.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    },
-    "b_2008": {
-        "user_id": "u_002",
-        "category": "Education",
-        "amount": 150.00,
-        "period": "monthly",
-        "month": "2026-09",
-        "created_at": "2026-09-01"
-    }
+        "b_1001": {
+            "user_id": "u_001",
+            "category": "Rent",
+            "amount": 1200.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        },
+        "b_1002": {
+            "user_id": "u_001",
+            "category": "Food",
+            "amount": 200.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        },
+        "b_1003": {
+            "user_id": "u_001",
+            "category": "Transport",
+            "amount": 100.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        },
+        "b_1004": {
+            "user_id": "u_001",
+            "category": "Utilities",
+            "amount": 200.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        },
+        "b_1005": {
+            "user_id": "u_001",
+            "category": "Entertainment",
+            "amount": 100.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        },
+        "b_1006": {
+            "user_id": "u_001",
+            "category": "Health",
+            "amount": 100.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        },
+        "b_1007": {
+            "user_id": "u_001",
+            "category": "Shopping",
+            "amount": 200.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        },
+        "b_1008": {
+            "user_id": "u_001",
+            "category": "Education",
+            "amount": 250.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        },
+        "b_2001": {
+            "user_id": "u_002",
+            "category": "Rent",
+            "amount": 950.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        },
+        "b_2002": {
+            "user_id": "u_002",
+            "category": "Food",
+            "amount": 300.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        },
+        "b_2003": {
+            "user_id": "u_002",
+            "category": "Transport",
+            "amount": 150.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        },
+        "b_2004": {
+            "user_id": "u_002",
+            "category": "Utilities",
+            "amount": 200.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        },
+        "b_2005": {
+            "user_id": "u_002",
+            "category": "Entertainment",
+            "amount": 100.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        },
+        "b_2006": {
+            "user_id": "u_002",
+            "category": "Health",
+            "amount": 100.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        },
+        "b_2007": {
+            "user_id": "u_002",
+            "category": "Shopping",
+            "amount": 250.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        },
+        "b_2008": {
+            "user_id": "u_002",
+            "category": "Education",
+            "amount": 150.0,
+            "period": "monthly",
+            "month": "2026-09",
+            "created_at": "2026-09-01"
+        }
     }
 }
