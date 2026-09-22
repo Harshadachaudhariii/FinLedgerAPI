@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from app.routes.budget_system import router as budget_router
 from app.routes.analytics import router as analytics_router
 from app.utils.data import load_data, save_data
+from app.utils.security import hash_password, verify_password
 from app.enums.transaction import *
 from app.model.user import *
 from app.model.transactions import *
@@ -301,7 +302,14 @@ def view_transaction(transaction_id: str,user_id: str = Header(...)):
 def create_new_user(users: User):
     data = load_data()
     new_user_id = generate_user_id(data)
-    data["users"][new_user_id] = users.model_dump(mode="json", exclude_unset=True)
+   # 1. Convert the user data to a dictionary
+    user_data = users.model_dump(mode="json", exclude_unset=True)
+    
+    # 2. Hash the password before saving
+    user_data["password"] = hash_password(user_data["password"])
+    
+    # 3. Save the hashed data
+    data["users"][new_user_id] = user_data
     save_data(data)
     return JSONResponse(status_code=201,content={"message": "User registered successfully.", "id": new_user_id})
 
@@ -311,7 +319,7 @@ def verify_user(users:User):
     
     for user_id, value in data["users"].items():
          if value["username"] == users.username:
-            if value["password"] == users.password:
+            if verify_password(users.password, value["password"]):
                  return JSONResponse(
                             status_code=200,
                             content={
