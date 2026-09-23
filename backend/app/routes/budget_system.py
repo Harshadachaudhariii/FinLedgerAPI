@@ -6,6 +6,7 @@ from app.utils.data import load_data, save_data
 from app.model.budget import *
 from app.enums.budget import BudgetStatusType, TransactionCategory
 from app.utils.security import get_current_user
+from app.utils.logger import logger
 
 router = APIRouter()    
 
@@ -21,7 +22,7 @@ def generate_budget_id(data,user_id: str) -> str:
                 numbers.append(number)
 
             except (ValueError, IndexError):
-                print(f"Invalid key format: {key}. Skipping.")
+                logger.warning("Invalid budget key format encountered: %s", key)
 
     # User has no previous budgets
     if not numbers:
@@ -51,114 +52,150 @@ def calculate_category_spending(data, user_id, category, month):
 
 @router.get("")
 def get_budgets(user_id: str = Depends(get_current_user), month: Optional[str] = Query(None)):
-    data = load_data()
-    budgets = []
-    for budgets_id, budgets_info in data["budgets"].items():
-        if budgets_info["user_id"] != user_id:
-            continue
+    try:
+        data = load_data()
+        budgets = []
+        for budgets_id, budgets_info in data["budgets"].items():
+            if budgets_info["user_id"] != user_id:
+                continue
 
-        if month is not None and budgets_info["month"] != month:
-            continue
-        budgets.append(budgets_info)
-    return budgets
+            if month is not None and budgets_info["month"] != month:
+                continue
+            budgets.append(budgets_info)
+        logger.info("Fetched budgets for user %s, month=%s", user_id, month)
+        return budgets
+    except Exception:
+        logger.exception("Failed to fetch budgets for user %s", user_id)
+        raise
         
 @router.get("/status")
 def get_budget_status(user_id: str = Depends(get_current_user), month: Optional[str] = Query(None)):
-    data = load_data()
-    if month is None:
-        month = date.today().strftime("%Y-%m")
+    try:
+        data = load_data()
+        if month is None:
+            month = date.today().strftime("%Y-%m")
 
-    budget_statuses = []
-    for budgets_id, budgets_info in data["budgets"].items():
-        if budgets_info["user_id"] != user_id:
-            continue
+        budget_statuses = []
+        for budgets_id, budgets_info in data["budgets"].items():
+            if budgets_info["user_id"] != user_id:
+                continue
 
-        if budgets_info["month"] != month:
-            continue
-        budgeted_amount = budgets_info["amount"]
-        spent_amount = calculate_category_spending(
-            data,
-            user_id,
-            budgets_info["category"],
-            month
-        )
-        remaining = budgeted_amount - spent_amount
-        percentage_used = (spent_amount / budgeted_amount) * 100
-        if percentage_used < 90:
-            status = "on_track"
-        elif percentage_used < 100:
-            status = "warning"
-        else:
-            status = "exceeded"
-        budget_statuses.append(
-            BudgetStatus(
-                budget_id=budgets_id,
-                category=budgets_info["category"],
-                month=month,
-                budget_amount=budgeted_amount,
-                spent_amount=spent_amount,
-                remaining_amount=remaining,
-                percentage_used=percentage_used,
-                status=status
+            if budgets_info["month"] != month:
+                continue
+            budgeted_amount = budgets_info["amount"]
+            spent_amount = calculate_category_spending(
+                data,
+                user_id,
+                budgets_info["category"],
+                month
             )
-        )
-    
-    return JSONResponse(status_code=200, content={
-        "user_id": user_id,
-        "month": month,
-        "Budgets status": [status.model_dump(mode="json") for status in budget_statuses]
-    })
+            remaining = budgeted_amount - spent_amount
+            percentage_used = (spent_amount / budgeted_amount) * 100
+            if percentage_used < 90:
+                status = "on_track"
+            elif percentage_used < 100:
+                status = "warning"
+            else:
+                status = "exceeded"
+            budget_statuses.append(
+                BudgetStatus(
+                    budget_id=budgets_id,
+                    category=budgets_info["category"],
+                    month=month,
+                    budget_amount=budgeted_amount,
+                    spent_amount=spent_amount,
+                    remaining_amount=remaining,
+                    percentage_used=percentage_used,
+                    status=status
+                )
+            )
+
+        logger.info("Budget status fetched for user %s, month=%s", user_id, month)
+        return JSONResponse(status_code=200, content={
+            "user_id": user_id,
+            "month": month,
+            "Budgets status": [status.model_dump(mode="json") for status in budget_statuses]
+        })
+    except Exception:
+        logger.exception("Failed to generate budget status for user %s", user_id)
+        raise
             
 @router.post("/create")
 def create_budget(budget: BudgetCreate, user_id: str = Depends(get_current_user)):
-    data = load_data()
-    for budget_id, budget_info in data["budgets"].items():
-        if (
-            budget_info["user_id"] == user_id
-            and budget_info["category"] == budget.category
-            and budget_info["month"] == budget.month
-        ):
-            raise HTTPException(status_code=409, detail="Budget already exists")
-    budget_id = generate_budget_id(data,user_id)
-    budget_data = budget.model_dump(mode="json", exclude_unset=True)
-    budget_data["user_id"] = user_id
-    data["budgets"][budget_id] = budget_data
-    save_data(data)
-    return JSONResponse(status_code=201, content={"message":"Budget created successfully.","user_id":user_id})
+    try:
+        data = load_data()
+        for budget_id, budget_info in data["budgets"].items():
+            if (
+                budget_info["user_id"] == user_id
+                and budget_info["category"] == budget.category
+                and budget_info["month"] == budget.month
+            ):
+                logger.warning("Duplicate budget creation attempt by user %s for category %s, month %s", user_id, budget.category, budget.month)
+                raise HTTPException(status_code=409, detail="Budget already exists")
+        budget_id = generate_budget_id(data,user_id)
+        budget_data = budget.model_dump(mode="json", exclude_unset=True)
+        budget_data["user_id"] = user_id
+        data["budgets"][budget_id] = budget_data
+        save_data(data)
+        logger.info("Budget created successfully for user %s with ID %s", user_id, budget_id)
+        return JSONResponse(status_code=201, content={"message":"Budget created successfully.","user_id":user_id})
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Unexpected error while creating budget for user %s", user_id)
+        raise
 
 @router.put("/update/{budget_id}")
 def update_budget(budget_id: str, budget_update: BudgetUpdate, user_id: str = Depends(get_current_user)):
-    data = load_data()
-    if budget_id not in data["budgets"]:
-        raise HTTPException(
-                status_code=404,
-                detail="budget_id ID not found"
-            )
-    if data["budgets"][budget_id]["user_id"] != user_id:
-        raise HTTPException(status_code=403, detail="You haven't ownership to this budgets")
-    existing_budget_info = data["budgets"][budget_id]
-    update_budgets_info = budget_update.model_dump(mode="json", exclude_unset=True)
-    existing_budget_info.update(update_budgets_info)
-    data["budgets"][budget_id] = existing_budget_info
-    
-    save_data(data)
-    return JSONResponse(status_code=200, content={"message":"budgets updated successfully.", "user_id":user_id, "budgets":data["budgets"][budget_id]})
+    try:
+        data = load_data()
+        if budget_id not in data["budgets"]:
+            logger.warning("Budget update failed: budget_id %s not found for user %s", budget_id, user_id)
+            raise HTTPException(
+                    status_code=404,
+                    detail="budget_id ID not found"
+                )
+        if data["budgets"][budget_id]["user_id"] != user_id:
+            logger.warning("Budget update forbidden for user %s on budget %s", user_id, budget_id)
+            raise HTTPException(status_code=403, detail="You haven't ownership to this budgets")
+        existing_budget_info = data["budgets"][budget_id]
+        update_budgets_info = budget_update.model_dump(mode="json", exclude_unset=True)
+        existing_budget_info.update(update_budgets_info)
+        data["budgets"][budget_id] = existing_budget_info
+
+        save_data(data)
+        logger.info("Budget updated successfully for user %s and budget %s", user_id, budget_id)
+        return JSONResponse(status_code=200, content={"message":"budgets updated successfully.", "user_id":user_id, "budgets":data["budgets"][budget_id]})
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Unexpected error while updating budget %s for user %s", budget_id, user_id)
+        raise
 
 @router.delete("/delete/{budget_id}")
 def delete_budget(budget_id: str, user_id:str=Depends(get_current_user)):
-    data = load_data()
-        
-    if budget_id not in data["budgets"]:
-            raise HTTPException(
-                status_code=404,
-                detail="Budget ID not found"
-            )
-    if data["budgets"][budget_id]["user_id"] != user_id:
-        raise HTTPException(status_code=403, detail="You don't have ownership of this budgets")
-    
-    del data["budgets"][budget_id]
-        
-    save_data(data)
-        
-    return JSONResponse(status_code=200, content={"message":"Budgets deleted successfully.","budget_id":budget_id})
+    try:
+        data = load_data()
+
+        if budget_id not in data["budgets"]:
+                logger.warning("Budget delete failed: budget_id %s not found for user %s", budget_id, user_id)
+                raise HTTPException(
+                    status_code=404,
+                    detail="Budget ID not found"
+                )
+        if data["budgets"][budget_id]["user_id"] != user_id:
+            logger.warning("Budget delete forbidden for user %s on budget %s", user_id, budget_id)
+            raise HTTPException(status_code=403, detail="You don't have ownership of this budgets")
+
+        del data["budgets"][budget_id]
+
+        save_data(data)
+        logger.info("Budget deleted successfully: %s for user %s", budget_id, user_id)
+
+        return JSONResponse(status_code=200, content={"message":"Budgets deleted successfully.","budget_id":budget_id})
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Unexpected error while deleting budget %s for user %s", budget_id, user_id)
+        raise
         
