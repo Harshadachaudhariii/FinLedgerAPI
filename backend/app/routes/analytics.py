@@ -1,11 +1,10 @@
-from fastapi import FastAPI, HTTPException, Path, Query, Header, APIRouter
+from fastapi import APIRouter, HTTPException, Query, Depends
 from datetime import date
-import json
-from pydantic import Field
+
 from typing import Optional
 from fastapi.responses import JSONResponse
 from app.utils.data import load_data, save_data
-
+from app.utils.security import get_current_user
 
 router = APIRouter()
 
@@ -41,7 +40,7 @@ def get_filtered_expenses(data, user_id, start_date, end_date):
 def daily_average_spent(start_date: Optional[date] = Query(None, 
     description="Start date for daily spending average"),
     end_date: Optional[date] = Query(None, description="End date for daily spending average"),
-    user_id:str=Header(...)):
+    user_id:str=Depends(get_current_user)):
     
     data = load_data()
     
@@ -83,7 +82,7 @@ def month_over_month_comparing(
         None,
         description="Target month in YYYY-MM format"
     ),
-    user_id: str = Header(...)
+    user_id: str = Depends(get_current_user)
 ):
     data = load_data()
 
@@ -194,7 +193,7 @@ def month_over_month_comparing(
 def highest_spending_in_day(start_date: Optional[date] = Query(None,
     description="Start date for highest spending day"),
     end_date: Optional[date] = Query(None,
-    description="End date for highest spending day"),user_id: str = Header(...)):
+    description="End date for highest spending day"),user_id: str = Depends(get_current_user)):
     data = load_data()
 
     daily_totals = {}

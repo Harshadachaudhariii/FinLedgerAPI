@@ -1,15 +1,17 @@
-from fastapi import FastAPI, HTTPException, Path, Query , Header, APIRouter
+from fastapi import FastAPI, HTTPException, Path, Query, APIRouter, Depends
+from app.utils.security import hash_password, verify_password, create_access_token, get_current_user
 from datetime import date
 import json
+from pydantic import BaseModel
 from typing import Optional, Annotated, List,Literal
 from fastapi.responses import JSONResponse
 from app.routes.budget_system import router as budget_router
 from app.routes.analytics import router as analytics_router
 from app.utils.data import load_data, save_data
-from app.utils.security import hash_password, verify_password
 from app.enums.transaction import *
 from app.model.user import *
 from app.model.transactions import *
+from fastapi.security import OAuth2PasswordRequestForm
 
 app = FastAPI()
 app.include_router(budget_router, prefix="/budgets", tags=["Budgets"])
@@ -71,7 +73,7 @@ def about():
     return {"message":"A fully functional finacial tracker system API built with FastAPI."}
 
 @app.get("/transactions")
-def view_transactions(user_id: str = Header(...)):
+def view_transactions(user_id: str = Depends(get_current_user)):
     data = load_data()
     transactions = []
 
@@ -86,7 +88,7 @@ def filter_transaction(type: Optional[Literal["income", "expense"]] = Query(None
     category: Optional[TransactionCategory] = Query(None),
     start_date: Optional[date] = Query(None, description="Start date for filtering"),
     end_date: Optional[date] = Query(None, description="End date for filtering"),
-    user_id: str = Header(...)):
+    user_id: str = Depends(get_current_user)):
     
     if start_date is not None and end_date is not None:
         if end_date <start_date:
@@ -128,7 +130,7 @@ def filter_transaction(type: Optional[Literal["income", "expense"]] = Query(None
 @app.get("/transactions/summary/overview")
 def summary_transactions(start_date: Optional[date] = Query(None, description="Start date for filtering"),
     end_date: Optional[date] = Query(None, description="End date for filtering"),
-    user_id:str=Header(...)):
+    user_id:str=Depends(get_current_user)):
     data = load_data()
     
     total_income = 0.0
@@ -166,13 +168,13 @@ def summary_transactions(start_date: Optional[date] = Query(None, description="S
         "total_expense": total_expense,
         "net_balance": net_balance,
         "transaction_count": transaction_count,
-        "currency": "USD"
+        "currency": "Indian Rupees (INR)"
     })
 
 @app.get("/transactions/summary/by-category")   
 def summary_by_category_transaction(start_date: Optional[date] = Query(None, description="Start date for filtering"),
     end_date: Optional[date] = Query(None, description="End date for filtering"),
-    user_id:str=Header(...)):
+    user_id:str=Depends(get_current_user)):
     
     data = load_data()
     
@@ -222,7 +224,7 @@ def summary_by_category_transaction(start_date: Optional[date] = Query(None, des
 @app.get("/transactions/summary/monthly")
 def summary_monthly_transaction(start_date: Optional[date] = Query(None, description="Start date for filtering"),
     end_date: Optional[date] = Query(None, description="End date for filtering"),
-    user_id:str=Header(...)):
+    user_id:str=Depends(get_current_user)):
     data = load_data()
     
     monthly_data ={}
@@ -281,7 +283,7 @@ def summary_monthly_transaction(start_date: Optional[date] = Query(None, descrip
     })
 
 @app.get("/transactions/{transaction_id}")
-def view_transaction(transaction_id: str,user_id: str = Header(...)):
+def view_transaction(transaction_id: str,user_id: str = Depends(get_current_user)):
     data =load_data()
     if transaction_id not in data["transactions"]:
         raise HTTPException(
@@ -313,24 +315,33 @@ def create_new_user(users: User):
     save_data(data)
     return JSONResponse(status_code=201,content={"message": "User registered successfully.", "id": new_user_id})
 
+# Create a dedicated schema for login requests in your Pydantic models
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
 @app.post("/users/login")
-def verify_user(users:User):
+def verify_user(form_data: OAuth2PasswordRequestForm = Depends()):
     data = load_data()
     
     for user_id, value in data["users"].items():
-         if value["username"] == users.username:
-            if verify_password(users.password, value["password"]):
-                 return JSONResponse(
-                            status_code=200,
-                            content={
-                                    "message": "User login successfully.",
-                                    "user_id": user_id
-                                }
-                            )
-    raise HTTPException(status_code=401, detail="Invalid username and password")
+        # Check if username matches
+        if value["username"] == form_data.username:
+            # Check if password matches 
+            # (Note: if you implemented password hashing, use verify_password here instead of ==)
+            if verify_password(form_data.password, value["password"]): 
+                
+                # For now, we return the user_id as the token just to test the Authorize button
+                return {
+                    "message":"User Login Successfully.",
+                    "access_token": user_id, 
+                    "token_type": "bearer"
+                }
+                
+    raise HTTPException(status_code=401, detail="Invalid username or password")
     
 @app.post("/transactions/create")
-def create_transactions(transactions:Transaction, user_id:str=Header(...)):
+def create_transactions(transactions:Transaction, user_id:str=Depends(get_current_user)):
     data = load_data()
     if user_id not in data["users"]:
         raise HTTPException(status_code=404, detail="User ID not found.")
@@ -343,7 +354,7 @@ def create_transactions(transactions:Transaction, user_id:str=Header(...)):
     return JSONResponse(status_code=201,content={"message":"Transaction created successfully.", "transactions_id":transactions_id})    
 
 @app.put("/transactions/update/{transaction_id}")
-def update_transaction(transaction_id: str,transaction:TransactionUpdate,user_id: str=Header(...)):
+def update_transaction(transaction_id: str,transaction:TransactionUpdate,user_id: str=Depends(get_current_user)):
     data = load_data()
     if transaction_id not in data["transactions"]:
         raise HTTPException(
@@ -362,7 +373,7 @@ def update_transaction(transaction_id: str,transaction:TransactionUpdate,user_id
     return JSONResponse(status_code=200, content={"message":"Transaction updated successfully.", "user_id":user_id, "transaction":data["transactions"][transaction_id]})
     
 @app.delete("/transactions/delete/{transaction_id}")
-def delete_transaction(transaction_id:str, user_id:str=Header(...)):
+def delete_transaction(transaction_id:str, user_id:str=Depends(get_current_user)):
     data = load_data()
     
     if transaction_id not in data["transactions"]:

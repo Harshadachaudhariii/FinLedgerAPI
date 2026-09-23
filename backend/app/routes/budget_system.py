@@ -1,11 +1,11 @@
-from fastapi import FastAPI, HTTPException, Path, Query, Header, APIRouter
+from fastapi import HTTPException, Path, Query, Header, APIRouter, Depends
 from datetime import date
-import json
 from typing import Optional
 from fastapi.responses import JSONResponse
 from app.utils.data import load_data, save_data
 from app.model.budget import *
 from app.enums.budget import BudgetStatusType, TransactionCategory
+from app.utils.security import get_current_user
 
 router = APIRouter()    
 
@@ -50,7 +50,7 @@ def calculate_category_spending(data, user_id, category, month):
     return total_spent
 
 @router.get("")
-def get_budgets(user_id: str = Header(...), month: Optional[str] = Query(None)):
+def get_budgets(user_id: str = Depends(get_current_user), month: Optional[str] = Query(None)):
     data = load_data()
     budgets = []
     for budgets_id, budgets_info in data["budgets"].items():
@@ -63,7 +63,7 @@ def get_budgets(user_id: str = Header(...), month: Optional[str] = Query(None)):
     return budgets
         
 @router.get("/status")
-def get_budget_status(user_id: str = Header(...), month: Optional[str] = Query(None)):
+def get_budget_status(user_id: str = Depends(get_current_user), month: Optional[str] = Query(None)):
     data = load_data()
     if month is None:
         month = date.today().strftime("%Y-%m")
@@ -110,7 +110,7 @@ def get_budget_status(user_id: str = Header(...), month: Optional[str] = Query(N
     })
             
 @router.post("/create")
-def create_budget(budget: BudgetCreate, user_id: str = Header(...)):
+def create_budget(budget: BudgetCreate, user_id: str = Depends(get_current_user)):
     data = load_data()
     for budget_id, budget_info in data["budgets"].items():
         if (
@@ -127,7 +127,7 @@ def create_budget(budget: BudgetCreate, user_id: str = Header(...)):
     return JSONResponse(status_code=201, content={"message":"Budget created successfully.","user_id":user_id})
 
 @router.put("/update/{budget_id}")
-def update_budget(budget_id: str, budget_update: BudgetUpdate, user_id: str = Header(...)):
+def update_budget(budget_id: str, budget_update: BudgetUpdate, user_id: str = Depends(get_current_user)):
     data = load_data()
     if budget_id not in data["budgets"]:
         raise HTTPException(
@@ -145,7 +145,7 @@ def update_budget(budget_id: str, budget_update: BudgetUpdate, user_id: str = He
     return JSONResponse(status_code=200, content={"message":"budgets updated successfully.", "user_id":user_id, "budgets":data["budgets"][budget_id]})
 
 @router.delete("/delete/{budget_id}")
-def delete_budget(budget_id: str, user_id: str = Header(...)):
+def delete_budget(budget_id: str, user_id:str=Depends(get_current_user)):
     data = load_data()
         
     if budget_id not in data["budgets"]:
