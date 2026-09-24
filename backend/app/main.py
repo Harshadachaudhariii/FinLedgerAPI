@@ -9,7 +9,7 @@ from app.routes.budget_system import router as budget_router
 from app.routes.analytics import router as analytics_router
 from app.utils.data import load_data, save_data
 from app.utils.logger import *
-from app.utils.security import hash_password, verify_password, create_access_token, get_current_user, add_token_to_blocklist, check_rate_limit, oauth2_scheme
+from app.utils.security import hash_password, verify_password, create_access_token, get_current_user, add_token_to_blocklist, check_rate_limit, record_failed_login, oauth2_scheme
 from app.enums.transaction import *
 from app.model.user import *
 from app.model.transactions import *
@@ -137,9 +137,11 @@ def view_transactions(
 
     try:
         data = load_data()
-        transactions = [t for t in data.get("transactions", {}).values() if t.get("user_id") == current_user_id and not t.get("deleted_at")]
+        transactions = [{"id": tid, **t} for tid, t in data.get("transactions", {}).items()
+            if t.get("user_id") == current_user_id and not t.get("deleted_at")
+        ]
 
-        logger.info("Found %s transactions for user: %s",len(transactions),current_user_id)
+        logger.info("Found %s transactions for user: %s", len(transactions), current_user_id)
         paginated_transactions = transactions[skip : skip + limit]
 
         logger.info("Returning %s transactions for user: %s",len(paginated_transactions),current_user_id)
@@ -179,6 +181,8 @@ def filter_transaction(type: Optional[Literal["income", "expense"]] = Query(None
         for transaction_id , transaction_info in data["transactions"].items():
             if transaction_info["user_id"] != user_id:
                 continue
+            if transaction_info.get("deleted_at"):
+                continue
             match =True
             for key, value in filter_criteria.items():
                 if transaction_info.get(key) != value:
@@ -194,10 +198,10 @@ def filter_transaction(type: Optional[Literal["income", "expense"]] = Query(None
                 match =False
 
             if match:
-                filtered_data[transaction_id] = transaction_info
+                filtered_data[transaction_id] = {"id": transaction_id, **transaction_info}
 
         logger.info("Filtered transactions returned %s results for user %s", len(filtered_data), user_id)
-        return filtered_data
+        return list(filtered_data.values())
     except HTTPException:
         raise
     except Exception:
@@ -217,6 +221,8 @@ def summary_transactions(start_date: Optional[date] = Query(None, description="S
         transaction_count = 0
         for transaction_id, transaction_info in data["transactions"].items():
             if transaction_info["user_id"] != user_id:
+                continue
+            if transaction_info.get("deleted_at"):
                 continue
 
             transactions_date = date.fromisoformat(transaction_info["dates"])
@@ -266,6 +272,8 @@ def summary_by_category_transaction(start_date: Optional[date] = Query(None, des
         total_expense=0.0
         for transaction_id, transaction_info in data["transactions"].items():
             if transaction_info["user_id"] != user_id:
+                continue
+            if transaction_info.get("deleted_at"):
                 continue
             transactions_date = date.fromisoformat(transaction_info["dates"])
             if start_date is not None and transactions_date < start_date:
@@ -321,6 +329,8 @@ def summary_monthly_transaction(start_date: Optional[date] = Query(None, descrip
 
         for transaction_id, transaction_info in data["transactions"].items():
             if transaction_info["user_id"] != user_id:
+                continue
+            if transaction_info.get("deleted_at"):
                 continue
             transactions_date = date.fromisoformat(transaction_info["dates"])
             if start_date is not None and transactions_date < start_date:
@@ -447,7 +457,7 @@ class LoginRequest(BaseModel):
 @app.post("/users/login")
 def verify_user(form_data: OAuth2PasswordRequestForm = Depends()):
     if not check_rate_limit(form_data.username):
-        raise HTTPException(status_code=429, detail="Too many login attempts. Please")
+        raise HTTPException(status_code=429, detail="Too many login attempts. Please try again later.")
     logger.info("Login attempt for username: %s", form_data.username)
     try:
         
@@ -465,11 +475,29 @@ def verify_user(form_data: OAuth2PasswordRequestForm = Depends()):
                     }
 
         logger.warning("Failed login attempt for username: %s", form_data.username)
+        record_failed_login(form_data.username)
         raise HTTPException(status_code=401, detail="Invalid username or password")
     except HTTPException:
         raise
     except Exception:
         logger.exception("Unexpected error during login for username %s", form_data.username)
+        raise
+
+@app.get("/users/me", tags=["Users"])
+def get_me(user_id: str = Depends(get_current_user)):
+    logger.info("Fetching profile for user %s", user_id)
+    try:
+        data = load_data()
+        user = data.get("users", {}).get(user_id)
+        if not user:
+            logger.warning("Profile not found for user %s", user_id)
+            raise HTTPException(status_code=404, detail="User not found")
+        user = {k: v for k, v in user.items() if k != "password"}
+        return {"user_id": user_id, **user}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to fetch profile for user %s", user_id)
         raise
 
 @app.post("/users/logout", tags=["Users"])
@@ -494,6 +522,8 @@ def create_transactions(transactions:Transaction, user_id:str=Depends(get_curren
         transactions_id = generate_transaction_id(data, user_id)
         transaction_data = transactions.model_dump(mode="json", exclude_unset=True)
         transaction_data["user_id"] = user_id
+        # Override currency with the user's preferred currency
+        transaction_data["currency"] = data["users"][user_id].get("currency", "INR")
         data["transactions"][transactions_id]= transaction_data
         save_data(data)
         logger.info("Transaction %s created successfully for user %s", transactions_id, user_id)

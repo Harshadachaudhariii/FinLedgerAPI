@@ -42,6 +42,8 @@ def calculate_category_spending(data, user_id, category, month):
     total_spent = 0.0
     for transaction_id, transaction_info in data.get("transactions", {}).items():
         if transaction_info.get("user_id") == user_id and transaction_info.get("type") == "expense":
+            if transaction_info.get("deleted_at"):
+                continue
             if transaction_info.get("category") == category:
                 transaction_month = date.fromisoformat(transaction_info["dates"]).strftime("%Y-%m")
                 if transaction_month == month:
@@ -57,9 +59,12 @@ def get_budgets(user_id: str = Depends(get_current_user), month: Optional[str] =
             if budgets_info["user_id"] != user_id:
                 continue
 
+            if budgets_info.get("deleted_at"):
+                continue
+
             if month is not None and budgets_info["month"] != month:
                 continue
-            budgets.append(budgets_info)
+            budgets.append({"id": budgets_id, **budgets_info})
         logger.info("Fetched budgets for user %s, month=%s", user_id, month)
         return budgets
     except Exception:
@@ -103,6 +108,8 @@ def get_budget_status(user_id: str = Depends(get_current_user),month: Optional[s
         budget_statuses = []
         for budgets_id, budgets_info in data.get("budgets", {}).items():
             if budgets_info.get("user_id") != user_id:
+                continue
+            if budgets_info.get("deleted_at"):
                 continue
             if budgets_info.get("month") != month:
                 continue

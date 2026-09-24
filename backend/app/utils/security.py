@@ -38,12 +38,19 @@ def is_token_blocked(token: str) -> bool:
     return token in token_blocklist
 
 def check_rate_limit(username: str) -> bool:
+    """Returns False if the username is currently rate-limited. Does NOT record the attempt."""
     current_time = time.time()
-    login_attempts[username] = [t for t in login_attempts[username] if current_time - t < RATE_LIMIT_WINDOW]
-    if len(login_attempts[username]) >= MAX_ATTEMPTS:
-        return False
-    login_attempts[username].append(current_time)
-    return True
+    login_attempts[username] = [
+        t for t in login_attempts[username]
+        if current_time - t < RATE_LIMIT_WINDOW
+    ]
+    return len(login_attempts[username]) < MAX_ATTEMPTS
+
+
+def record_failed_login(username: str) -> None:
+    """Records a failed login attempt for rate-limit tracking."""
+    login_attempts[username].append(time.time())
+    
 # 2. JWT Functions (Notice we now use settings.SECRET_KEY)
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     try:

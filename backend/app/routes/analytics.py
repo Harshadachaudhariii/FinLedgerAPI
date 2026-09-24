@@ -18,6 +18,10 @@ def get_filtered_expenses(data, user_id, start_date, end_date):
         if transaction_info["user_id"] != user_id:
             continue
 
+        # Skip soft-deleted
+        if transaction_info.get("deleted_at"):
+            continue
+
         # Only expenses
         if transaction_info["type"] != "expense":
             continue
@@ -53,6 +57,10 @@ def daily_average_spent(start_date: Optional[date] = Query(None,
 
         if end_date is None:
             end_date = today
+
+        if end_date < start_date:
+            logger.warning("Invalid date range for user %s: start=%s end=%s", user_id, start_date, end_date)
+            raise HTTPException(status_code=400, detail="end_date cannot be before start_date")
 
         days_in_period = (end_date - start_date).days + 1
         filtered_expenses = get_filtered_expenses(
@@ -213,6 +221,10 @@ def highest_spending_in_day(start_date: Optional[date] = Query(None,
 
             # Check user
             if transaction_info["user_id"] != user_id:
+                continue
+
+            # Skip soft-deleted
+            if transaction_info.get("deleted_at"):
                 continue
 
             # Convert transaction date from string to date
