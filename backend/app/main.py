@@ -1,21 +1,35 @@
-import logging
 from fastapi import FastAPI, HTTPException, Path, Query, APIRouter, Depends
-from app.utils.security import hash_password, verify_password, create_access_token, get_current_user
-from datetime import date
-import json
-from pydantic import BaseModel
-from typing import Optional, Annotated, List,Literal
 from fastapi.responses import JSONResponse
+from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional,Literal
+from datetime import date, datetime
 from app.routes.budget_system import router as budget_router
 from app.routes.analytics import router as analytics_router
 from app.utils.data import load_data, save_data
+from app.utils.logger import *
+from app.utils.security import hash_password, verify_password, create_access_token, get_current_user, add_token_to_blocklist, check_rate_limit, oauth2_scheme
 from app.enums.transaction import *
 from app.model.user import *
 from app.model.transactions import *
-from fastapi.security import OAuth2PasswordRequestForm
-from app.utils.logger import *
-
+from fastapi import UploadFile, File
+import csv
+import io
 app = FastAPI()
+
+# Allow all origins for development. In production, specify your frontend URL.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Replace with ["http://localhost:3000"] in production
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods (GET, POST, PUT, DELETE)
+    allow_headers=["*"],  # Allows all headers
+)
+
+@app.get("/health", tags=["System"])
+def health_check():
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 @app.on_event("startup")
 def startup_event():
@@ -113,21 +127,31 @@ def about():
     logger.info("About endpoint called")
     return {"message":"A fully functional finacial tracker system API built with FastAPI."}
 
-@app.get("/transactions")
-def view_transactions(user_id: str = Depends(get_current_user)):
-    logger.info("Fetching transactions for user %s", user_id)
+@app.get("/transactions", tags=["Transactions"])
+def view_transactions(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    current_user_id: str = Depends(get_current_user)
+):
+    logger.info("Viewing transactions for user: %s | skip=%s | limit=%s",current_user_id,skip,limit)
+
     try:
         data = load_data()
-        transactions = []
+        transactions = [t for t in data.get("transactions", {}).values() if t.get("user_id") == current_user_id and not t.get("deleted_at")]
 
-        for transaction in data["transactions"].values():
-            if transaction["user_id"] == user_id:
-                transactions.append(transaction)
+        logger.info("Found %s transactions for user: %s",len(transactions),current_user_id)
+        paginated_transactions = transactions[skip : skip + limit]
 
-        logger.info("Returned %s transactions for user %s", len(transactions), user_id)
-        return transactions
+        logger.info("Returning %s transactions for user: %s",len(paginated_transactions),current_user_id)
+        return {
+            "total_count": len(transactions),
+            "skip": skip,
+            "limit": limit,
+            "data": paginated_transactions
+        }
+
     except Exception:
-        logger.exception("Failed to fetch transactions for user %s", user_id)
+        logger.exception("Failed to retrieve transactions for user: %s",current_user_id)
         raise
 
 @app.get("/transactions/filter")
@@ -224,7 +248,7 @@ def summary_transactions(start_date: Optional[date] = Query(None, description="S
             "total_expense": total_expense,
             "net_balance": net_balance,
             "transaction_count": transaction_count,
-            "currency": "Indian Rupees (INR)"
+            "currency": data.get("users", {}).get(user_id, {}).get("currency", "INR")
         })
     except Exception:
         logger.exception("Failed to generate transaction overview for user %s", user_id)
@@ -264,7 +288,7 @@ def summary_by_category_transaction(start_date: Optional[date] = Query(None, des
 
         breakdown=[]
         for category, amount in category_totals.items():
-            percentage= (amount/total_expense) *100
+            percentage = (amount / total_expense * 100) if total_expense > 0 else 0.0
             breakdown.append({
                 "category":category,
                 "amount":amount,
@@ -379,18 +403,40 @@ def view_transaction(transaction_id: str,user_id: str = Depends(get_current_user
 
 @app.post("/users/register")
 def create_new_user(users: User):
-    logger.info("User registration initiated")
+    logger.info("User registration attempt for username: %s", users.username)
     try:
         data = load_data()
+        # Username uniqueness check
+        for existing_user in data.get("users", {}).values():
+            if existing_user["username"] == users.username:
+                logger.warning("Registration failed: username already exists: %s",users.username)
+                raise HTTPException(status_code=409,detail="Username already exists.")
+        logger.info("Username %s is available for registration",users.username)
         new_user_id = generate_user_id(data)
-        user_data = users.model_dump(mode="json", exclude_unset=True)
+        logger.info("Generated new user ID: %s", new_user_id)
+        user_data = users.model_dump(mode="json",exclude_unset=True)
+
         user_data["password"] = hash_password(user_data["password"])
+        logger.info("Password hashed successfully for user: %s", new_user_id)
+
+        user_data["created_at"] = date.today().isoformat()
+
         data["users"][new_user_id] = user_data
+
         save_data(data)
-        logger.info("User registered successfully with ID %s", new_user_id)
-        return JSONResponse(status_code=201,content={"message": "User registered successfully.", "id": new_user_id})
+        logger.info("User registered successfully: %s",new_user_id)
+        return JSONResponse(
+            status_code=201,
+            content={
+                "message": "User registered successfully.",
+                "id": new_user_id
+            }
+        )
+    except HTTPException:
+        raise
+
     except Exception:
-        logger.exception("Failed to register new user")
+        logger.exception("Unexpected error during registration for username: %s",users.username)
         raise
 
 # Create a dedicated schema for login requests in your Pydantic models
@@ -400,8 +446,11 @@ class LoginRequest(BaseModel):
 
 @app.post("/users/login")
 def verify_user(form_data: OAuth2PasswordRequestForm = Depends()):
+    if not check_rate_limit(form_data.username):
+        raise HTTPException(status_code=429, detail="Too many login attempts. Please")
     logger.info("Login attempt for username: %s", form_data.username)
     try:
+        
         data = load_data()
 
         for user_id, value in data["users"].items():
@@ -421,6 +470,17 @@ def verify_user(form_data: OAuth2PasswordRequestForm = Depends()):
         raise
     except Exception:
         logger.exception("Unexpected error during login for username %s", form_data.username)
+        raise
+
+@app.post("/users/logout", tags=["Users"])
+def logout_user(token: str = Depends(oauth2_scheme)):
+    logger.info("Logout attempt started")
+    try:
+        add_token_to_blocklist(token)
+        logger.info("User logged out successfully and token was revoked")
+        return {"message": "Successfully logged out"}
+    except Exception:
+        logger.exception("Logout failed while revoking token")
         raise
 
 @app.post("/transactions/create")
@@ -444,6 +504,80 @@ def create_transactions(transactions:Transaction, user_id:str=Depends(get_curren
         logger.exception("Failed to create transaction for user %s", user_id)
         raise
 
+@app.post("/transactions/import-csv", tags=["Transactions"])
+def import_transactions_csv(
+    file: UploadFile = File(...), 
+    current_user_id: str = Depends(get_current_user)
+):
+    logger.info("CSV import started for user: %s", current_user_id)
+    try:
+        data = load_data()
+        imported_count = 0
+        
+        # Read the uploaded file
+        contents = file.file.read()
+        csv_data = io.StringIO(contents.decode("utf-8"))
+        reader = csv.DictReader(csv_data)
+        
+        # Expected CSV headers: type,category,amount,currency,dates,description
+        for row in reader:
+            try:
+                trans_id = generate_transaction_id(data, current_user_id)
+                transaction_data = {
+                    "user_id": current_user_id,
+                    "type": row["type"],
+                    "category": row["category"],
+                    "amount": float(row["amount"]),
+                    "currency": row.get("currency", "INR"),
+                    "dates": row["dates"],
+                    "description": row.get("description", ""),
+                    "payment_method": row.get("payment_method", "Cash"),
+                    "status": "completed",
+                    "notes": "Imported via CSV"
+                }
+                data["transactions"][trans_id] = transaction_data
+                imported_count += 1
+            except Exception as e:
+                # Skip invalid rows but continue processing
+                continue
+                
+        save_data(data)
+        logger.info("Successfully imported %s transactions for user: %s", imported_count, current_user_id)
+        return {"message": f"Successfully imported {imported_count} transactions."}
+    except Exception:
+        logger.exception("Failed to import CSV for user: %s", current_user_id)
+        raise HTTPException(status_code=500, detail="Failed to process CSV file")
+
+@app.put("/users/change-password", tags=["Users"])
+def change_password(old_password: str,new_password: str,current_user_id: str = Depends(get_current_user)):
+    logger.info("Password change attempt for user: %s",current_user_id)
+    try:
+        data = load_data()
+        user = data["users"].get(current_user_id)
+        if not user:
+            logger.warning("Password change failed: user not found: %s",current_user_id)
+            raise HTTPException(status_code=404,detail="User not found")
+        logger.info("User found, verifying old password: %s",current_user_id)
+
+        if not verify_password(old_password, user["password"]):
+            logger.warning(
+                "Password change failed: incorrect old password for user: %s",
+                current_user_id
+            )
+            raise HTTPException(status_code=401,detail="Old password is incorrect")
+
+        user["password"] = hash_password(new_password)
+        logger.info("New password hashed successfully for user: %s",current_user_id)
+
+        save_data(data)
+        logger.info("Password changed successfully for user: %s",current_user_id)
+        return {"message": "Password changed successfully"}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Unexpected error while changing password for user: %s",current_user_id)
+        raise
+    
 @app.put("/transactions/update/{transaction_id}")
 def update_transaction(transaction_id: str,transaction:TransactionUpdate,user_id: str=Depends(get_current_user)):
     logger.info("Updating transaction %s for user %s", transaction_id, user_id)
@@ -474,32 +608,40 @@ def update_transaction(transaction_id: str,transaction:TransactionUpdate,user_id
         raise
 
 @app.delete("/transactions/delete/{transaction_id}")
-def delete_transaction(transaction_id:str, user_id:str=Depends(get_current_user)):
-    logger.info("Deleting transaction %s for user %s", transaction_id, user_id)
+def delete_transaction(transaction_id: str,user_id: str = Depends(get_current_user)):
+    logger.info("Deleting transaction %s for user %s",transaction_id,user_id)
     try:
         data = load_data()
+        # Check transaction exists
+        if transaction_id not in data.get("transactions", {}):
+            logger.warning("Transaction delete failed: transaction %s not found for user %s",transaction_id,user_id)
+            raise HTTPException(status_code=404,detail="Transaction ID not found")
 
-        if transaction_id not in data["transactions"]:
-                logger.warning("Transaction delete failed: transaction %s not found for user %s", transaction_id, user_id)
-                raise HTTPException(
-                    status_code=404,
-                    detail="Transaction ID not found"
-                )
-        if data["transactions"][transaction_id]["user_id"] != user_id:
-            logger.warning("Permission denied for user %s deleting transaction %s", user_id, transaction_id)
-            raise HTTPException(status_code=403, detail="You don't have ownership of this transaction")
+        transaction = data["transactions"][transaction_id]
 
-        del data["transactions"][transaction_id]
+        # Check ownership
+        if transaction.get("user_id") != user_id:
+            logger.warning("Permission denied for user %s deleting transaction %s",user_id,transaction_id)
+            raise HTTPException(status_code=403,detail="You don't have ownership of this transaction")
 
+        # Check if already deleted
+        if transaction.get("deleted_at"):
+            logger.warning("Transaction %s is already deleted for user %s",transaction_id,user_id)
+            raise HTTPException(status_code=404,detail="Transaction not found")
+
+        # Soft delete
+        transaction["deleted_at"] = datetime.now().isoformat()
         save_data(data)
-        logger.info("Transaction %s deleted successfully for user %s", transaction_id, user_id)
+        logger.info("Transaction %s deleted successfully for user %s",transaction_id,user_id)
 
-        return JSONResponse(status_code=200, content={"message":"Transaction deleted successfully.","transaction_id":transaction_id})
+        return JSONResponse(status_code=200,content={
+                "message": "Transaction deleted successfully.",
+                "transaction_id": transaction_id
+            }
+        )
     except HTTPException:
         raise
-    except Exception:
-        logger.exception("Failed to delete transaction %s for user %s", transaction_id, user_id)
-        raise
-    
 
-    
+    except Exception:
+        logger.exception("Failed to delete transaction %s for user %s",transaction_id,user_id)
+        raise

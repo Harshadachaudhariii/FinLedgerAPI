@@ -7,6 +7,7 @@ from app.model.budget import *
 from app.enums.budget import BudgetStatusType, TransactionCategory
 from app.utils.security import get_current_user
 from app.utils.logger import logger
+from datetime import datetime
 
 router = APIRouter()    
 
@@ -37,15 +38,12 @@ def generate_budget_id(data,user_id: str) -> str:
     return f"b_{new_number}"
 
 def calculate_category_spending(data, user_id, category, month):
-    data = load_data()
-    total_spent =0.0
-    for transaction_id, transaction_info in data["transactions"].items():
-        if transaction_info["user_id"] != user_id:
-            continue
-        transactions_date = date.fromisoformat(transaction_info["dates"])
-        if transaction_info["type"] == "expense":
-            if transaction_info["category"] == category:
-                transaction_month = transactions_date.strftime("%Y-%m")
+    # FIX: Removed `data = load_data()` so it uses the passed parameter
+    total_spent = 0.0
+    for transaction_id, transaction_info in data.get("transactions", {}).items():
+        if transaction_info.get("user_id") == user_id and transaction_info.get("type") == "expense":
+            if transaction_info.get("category") == category:
+                transaction_month = date.fromisoformat(transaction_info["dates"]).strftime("%Y-%m")
                 if transaction_month == month:
                     total_spent += transaction_info["amount"]
     return total_spent
@@ -67,20 +65,46 @@ def get_budgets(user_id: str = Depends(get_current_user), month: Optional[str] =
     except Exception:
         logger.exception("Failed to fetch budgets for user %s", user_id)
         raise
-        
-@router.get("/status")
-def get_budget_status(user_id: str = Depends(get_current_user), month: Optional[str] = Query(None)):
+
+@router.get("/{budget_id}", tags=["Budgets"])
+def get_single_budget(budget_id: str,current_user_id: str = Depends(get_current_user)):
+    logger.info("Fetching budget: %s for user: %s",budget_id,current_user_id)
+
+    try:
+        data = load_data()
+        budget = data.get("budgets", {}).get(budget_id)
+
+        if not budget:
+            logger.warning("Budget not found: %s for user: %s",budget_id,current_user_id)
+            raise HTTPException(status_code=404,detail="Budget not found")
+
+        if budget.get("user_id") != current_user_id:
+            logger.warning("Unauthorized budget access attempt: budget=%s | user=%s",budget_id,current_user_id)
+            raise HTTPException(status_code=404,detail="Budget not found")
+
+        logger.info("Budget retrieved successfully: %s for user: %s",budget_id,current_user_id)
+        return budget
+
+    except HTTPException:
+        raise
+
+    except Exception:
+        logger.exception("Failed to retrieve budget: %s for user: %s",budget_id,current_user_id)
+        raise
+
+@router.get("/status", tags=["Budgets"])
+def get_budget_status(user_id: str = Depends(get_current_user),month: Optional[str] = Query(None)):
+    logger.info("Fetching budget status for user: %s | month=%s",user_id,month)
     try:
         data = load_data()
         if month is None:
             month = date.today().strftime("%Y-%m")
-
+            logger.info("No month provided. Using current month: %s",month)
         budget_statuses = []
-        for budgets_id, budgets_info in data["budgets"].items():
-            if budgets_info["user_id"] != user_id:
+        for budgets_id, budgets_info in data.get("budgets", {}).items():
+            if budgets_info.get("user_id") != user_id:
                 continue
-
-            if budgets_info["month"] != month:
+            if budgets_info.get("month") != month:
                 continue
             budgeted_amount = budgets_info["amount"]
             spent_amount = calculate_category_spending(
@@ -90,34 +114,44 @@ def get_budget_status(user_id: str = Depends(get_current_user), month: Optional[
                 month
             )
             remaining = budgeted_amount - spent_amount
-            percentage_used = (spent_amount / budgeted_amount) * 100
+
+            percentage_used = (spent_amount / budgeted_amount * 100
+                if budgeted_amount > 0 else 0.0
+            )
+
             if percentage_used < 90:
                 status = "on_track"
             elif percentage_used < 100:
                 status = "warning"
             else:
                 status = "exceeded"
-            budget_statuses.append(
-                BudgetStatus(
-                    budget_id=budgets_id,
-                    category=budgets_info["category"],
-                    month=month,
-                    budget_amount=budgeted_amount,
-                    spent_amount=spent_amount,
-                    remaining_amount=remaining,
-                    percentage_used=percentage_used,
-                    status=status
-                )
-            )
 
-        logger.info("Budget status fetched for user %s, month=%s", user_id, month)
-        return JSONResponse(status_code=200, content={
+            budget_statuses.append({
+                "budget_id": budgets_id,
+                "category": budgets_info["category"],
+                "month": month,
+                "budget_amount": budgeted_amount,
+                "spent_amount": spent_amount,
+                "remaining_amount": remaining,
+                "percentage_used": round(percentage_used, 2),
+                "status": status
+            })
+
+            logger.info(
+                "Budget status calculated: budget_id=%s | category=%s | status=%s | percentage_used=%.2f",
+                budgets_id,budgets_info["category"],status,percentage_used)
+
+        logger.info("Budget status retrieved successfully for user: %s | month=%s | budgets_found=%s",
+            user_id,month,len(budget_statuses))
+
+        return {
             "user_id": user_id,
             "month": month,
-            "Budgets status": [status.model_dump(mode="json") for status in budget_statuses]
-        })
+            "budgets_status": budget_statuses
+        }
+
     except Exception:
-        logger.exception("Failed to generate budget status for user %s", user_id)
+        logger.exception("Failed to retrieve budget status for user: %s | month=%s",user_id,month)
         raise
             
 @router.post("/create")
@@ -187,7 +221,7 @@ def delete_budget(budget_id: str, user_id:str=Depends(get_current_user)):
             logger.warning("Budget delete forbidden for user %s on budget %s", user_id, budget_id)
             raise HTTPException(status_code=403, detail="You don't have ownership of this budgets")
 
-        del data["budgets"][budget_id]
+        data["budgets"][budget_id]["deleted_at"] = datetime.now().isoformat()
 
         save_data(data)
         logger.info("Budget deleted successfully: %s for user %s", budget_id, user_id)
