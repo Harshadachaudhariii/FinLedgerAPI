@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FinLedger — Budgets</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>" />
+    <link rel="stylesheet" href="/static/css/base.css" />
+    <link rel="stylesheet" href="/static/css/components.css" />
+    <link rel="stylesheet" href="/static/css/layout.css" />
+    <script src="/static/js/theme.js"></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand"><div class="brand-mark">💰</div><span>FinLedger</span></div>
+      <nav class="sidebar-nav" id="sidebar-nav"></nav>
+      <div class="sidebar-footer">v2.0.0 • © FinLedger</div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="hamburger" id="hamburger" aria-label="Menu"></button>
+          <div class="page-title" id="page-title">Budgets</div>
+        </div>
+        <div class="topbar-right">
+          <button class="topbar-btn" data-theme-toggle aria-label="Toggle theme"></button>
+          <div class="user-chip" id="user-chip"><div class="avatar">?</div></div>
+          <button class="topbar-btn" id="logout-btn" title="Logout" aria-label="Logout"></button>
+        </div>
+      </header>
+      
+      <main class="content">
+        <div class="section-header">
+          <h2>Budgets</h2>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="month" class="input" id="b-month" style="max-width:180px;" />
+            <button class="btn btn-primary" id="btn-add-budget">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+              Add Budget
+            </button>
+          </div>
+        </div>
+        
+        <div class="grid-cards" id="budget-grid">
+          <div class="skeleton skeleton-card"></div>
+          <div class="skeleton skeleton-card"></div>
+          <div class="skeleton skeleton-card"></div>
+          <div class="skeleton skeleton-card"></div>
+          <div class="skeleton skeleton-card"></div>
+          <div class="skeleton skeleton-card"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+  
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/icons.js"></script>
+  <script src="/static/js/layout.js"></script>
+  <script src="/static/js/budgets.js"></script>
+</body>
+</html>

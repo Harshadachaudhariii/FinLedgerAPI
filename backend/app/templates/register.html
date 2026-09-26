@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FinLedger — Create Account</title>
+  <meta name="description" content="Create your FinLedger account and start tracking every rupee." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>" />
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/components.css" />
+  <link rel="stylesheet" href="/static/css/auth.css" />
+  <script src="/static/js/theme.js"></script>
+</head>
+<body>
+  <button class="theme-toggle-float" data-theme-toggle aria-label="Toggle theme">🌙</button>
+
+  <div class="auth-page">
+    <!-- LEFT: Brand panel -->
+    <section class="auth-left">
+      <canvas id="auth-canvas" aria-hidden="true"></canvas>
+      <div class="auth-left-content">
+        <div class="auth-logo">
+          <div class="logo-mark">💰</div>
+          <span>FinLedger</span>
+        </div>
+
+        <h1 class="auth-headline">Track every rupee.<br>Master your future.</h1>
+        <p class="auth-sub">Take control of your personal finances with intelligent budgeting, clean analytics, and monthly insights.</p>
+
+        <ul class="auth-features">
+          <li class="auth-feature">
+            <span class="auth-feature-icon">📊</span>
+            <span>Real-time budget tracking</span>
+          </li>
+          <li class="auth-feature">
+            <span class="auth-feature-icon">🍰</span>
+            <span>Category-wise spending insights</span>
+          </li>
+          <li class="auth-feature">
+            <span class="auth-feature-icon">📈</span>
+            <span>Month-over-month analytics</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- RIGHT: Form card -->
+    <section class="auth-right">
+      <div class="auth-card">
+        <div class="auth-card-header">
+          <div class="mini-logo">💰</div>
+          <h2>Create your account</h2>
+          <p>Start tracking your finances in 30 seconds</p>
+        </div>
+
+        <form id="register-form" class="auth-form" novalidate>
+          <div class="field">
+            <label for="reg-username">Username <span class="req">*</span></label>
+            <input id="reg-username" class="input" type="text" autocomplete="username"
+                   placeholder="e.g. alice_finance" required />
+            <div class="field-error"></div>
+          </div>
+
+          <div class="field">
+            <label for="reg-password">Password <span class="req">*</span></label>
+            <div class="input-group">
+              <input id="reg-password" class="input" type="password" autocomplete="new-password"
+                     placeholder="At least 6 characters" required />
+              <button type="button" class="input-suffix" data-toggle-pass aria-label="Show password">👁</button>
+            </div>
+            <div class="field-error"></div>
+          </div>
+
+          <div class="field">
+            <label for="reg-confirm">Confirm Password <span class="req">*</span></label>
+            <input id="reg-confirm" class="input" type="password" autocomplete="new-password"
+                   placeholder="Repeat your password" required />
+            <div class="field-error"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full">
+            <span class="spinner"></span>
+            <span class="btn-label">Create Account</span>
+          </button>
+        </form>
+
+        <div class="auth-switch">
+          Already have an account? <a href="/login">Login</a>
+        </div>
+
+        <p class="auth-footer-note">By signing up you agree to keep your data secure.</p>
+      </div>
+    </section>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/icons.js"></script>
+  <script src="/static/js/auth.js"></script>
+</body>
+</html>

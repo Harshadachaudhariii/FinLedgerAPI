@@ -1,7 +1,9 @@
-from fastapi import FastAPI, HTTPException, Path, Query, APIRouter, Depends
-from fastapi.responses import JSONResponse,StreamingResponse
+from fastapi import FastAPI, HTTPException, Path, Query, APIRouter, Depends,Request
+from fastapi.responses import JSONResponse,StreamingResponse, HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import Optional,Literal
@@ -44,6 +46,12 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods (GET, POST, PUT, DELETE)
     allow_headers=["*"],  # Allows all headers
 )
+# ---------------------------------------------------------------
+# Static files + Templates
+# ---------------------------------------------------------------
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+templates = Jinja2Templates(directory="app/templates")
+
 @app.middleware("http")
 async def log_request_middleware(request, call_next):
     logger.info("Incoming request: %s %s", request.method, request.url.path)
@@ -56,8 +64,8 @@ async def log_request_middleware(request, call_next):
         raise
 
 # -------------Router ----------------------
-app.include_router(budget_router, prefix="/budgets", tags=["Budgets"])
-app.include_router(analytics_router, prefix="/analytics", tags=["Analytics"])
+app.include_router(budget_router, prefix="/api/budgets", tags=["Budgets"])
+app.include_router(analytics_router, prefix="/api/analytics", tags=["Analytics"])
 
 # ---------------------Helper -----------------------------
 def generate_user_id(data) -> str:
@@ -126,10 +134,32 @@ def generate_transaction_id(data, user_id: str) -> str:
 def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
-@app.get("/")
-def home():
-    logger.info("Home endpoint called")
-    return {"message":"Check is fastapi work or not"}
+# ================================================================
+# HTML PAGE ROUTES  (Starlette 0.29+ signature)
+# ================================================================
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def page_register(request: Request):
+    return templates.TemplateResponse(request, "register.html")
+
+@app.get("/login", response_class=HTMLResponse, include_in_schema=False)
+def page_login(request: Request):
+    return templates.TemplateResponse(request, "login.html")
+
+@app.get("/dashboard", response_class=HTMLResponse, include_in_schema=False)
+def page_dashboard(request: Request):
+    return templates.TemplateResponse(request, "dashboard.html")
+
+@app.get("/summary", response_class=HTMLResponse, include_in_schema=False)
+def page_summary(request: Request):
+    return templates.TemplateResponse(request, "summary.html")
+
+@app.get("/budgets", response_class=HTMLResponse, include_in_schema=False)
+def page_budgets(request: Request):
+    return templates.TemplateResponse(request, "budgets.html")
+
+@app.get("/analytics", response_class=HTMLResponse, include_in_schema=False)
+def page_analytics(request: Request):
+    return templates.TemplateResponse(request, "analytics.html")
 
 @app.get("/about")
 def about():
@@ -555,7 +585,7 @@ def summary_monthly_transaction(start_date: Optional[date] = Query(None, descrip
         logger.exception("Failed to generate monthly summary for user %s", user_id)
         raise
 
-@app.get("/dashboard", tags=["Transactions"])
+@app.get("/transactions/dashboard", tags=["Transactions"])
 def dashboard(current_user_id: str = Depends(get_current_user)):
     logger.info("Generating dashboard for user %s",current_user_id)
 

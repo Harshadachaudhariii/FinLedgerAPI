@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FinLedger — Login</title>
+  <meta name="description" content="Sign in to your FinLedger account." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>" />
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/components.css" />
+  <link rel="stylesheet" href="/static/css/auth.css" />
+  <script src="/static/js/theme.js"></script>
+</head>
+<body>
+  <button class="theme-toggle-float" data-theme-toggle aria-label="Toggle theme">🌙</button>
+
+  <div class="auth-page">
+    <!-- LEFT: Brand panel -->
+    <section class="auth-left">
+      <canvas id="auth-canvas" aria-hidden="true"></canvas>
+      <div class="auth-left-content">
+        <div class="auth-logo">
+          <div class="logo-mark">💰</div>
+          <span>FinLedger</span>
+        </div>
+
+        <h1 class="auth-headline">Welcome back.<br>Let's check your ledger.</h1>
+        <p class="auth-sub">Log in to see your budgets, transactions, and analytics at a glance.</p>
+
+        <ul class="auth-features">
+          <li class="auth-feature">
+            <span class="auth-feature-icon">⚡</span>
+            <span>Instant dashboard summary</span>
+          </li>
+          <li class="auth-feature">
+            <span class="auth-feature-icon">🎯</span>
+            <span>Monthly budget tracking</span>
+          </li>
+          <li class="auth-feature">
+            <span class="auth-feature-icon">🔒</span>
+            <span>Secure JWT authentication</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- RIGHT: Login card -->
+    <section class="auth-right">
+      <div class="auth-card">
+        <div class="auth-card-header">
+          <div class="mini-logo">💰</div>
+          <h2>Sign in</h2>
+          <p>Enter your credentials to continue</p>
+        </div>
+
+        <form id="login-form" class="auth-form" novalidate>
+          <div class="field">
+            <label for="login-username">Username <span class="req">*</span></label>
+            <input id="login-username" class="input" type="text" autocomplete="username"
+                   placeholder="Your username" required />
+            <div class="field-error"></div>
+          </div>
+
+          <div class="field">
+            <label for="login-password">Password <span class="req">*</span></label>
+            <div class="input-group">
+              <input id="login-password" class="input" type="password" autocomplete="current-password"
+                     placeholder="Your password" required />
+              <button type="button" class="input-suffix" data-toggle-pass aria-label="Show password">👁</button>
+            </div>
+            <div class="field-error"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full">
+            <span class="spinner"></span>
+            <span class="btn-label">Sign In</span>
+          </button>
+        </form>
+
+        <div class="auth-switch">
+          Don't have an account? <a href="/">Register</a>
+        </div>
+
+        <p class="auth-footer-note">Secure login powered by JWT</p>
+      </div>
+    </section>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/icons.js"></script>
+  <script src="/static/js/auth.js"></script>
+</body>
+</html>

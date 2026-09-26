@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FinLedger — Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>" />
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/components.css" />
+  <link rel="stylesheet" href="/static/css/layout.css" />
+  <script src="/static/js/theme.js"></script>
+</head>
+<body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark">💰</div>
+        <span>FinLedger</span>
+      </div>
+      <nav class="sidebar-nav" id="sidebar-nav"></nav>
+      <div class="sidebar-footer">v2.0.0 • © FinLedger</div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- MAIN -->
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+            <button class="hamburger" id="hamburger" aria-label="Menu"></button>
+          <div class="page-title" id="page-title">Dashboard</div>
+        </div>
+        <div class="topbar-right">
+          <button class="topbar-btn" data-theme-toggle aria-label="Toggle theme"></button>
+          <div class="user-chip" id="user-chip">
+            <div class="avatar">?</div>
+          </div>
+            <button class="topbar-btn" id="logout-btn" title="Logout" aria-label="Logout"></button>
+        </div>
+      </header>
+
+      <main class="content">
+        <!-- ============ OVERVIEW SECTION ============ -->
+        <section class="section" id="section-overview" data-section="overview">
+          <div class="section-header">
+            <h2>Overview</h2>
+          </div>
+
+          <div class="grid-kpi" id="kpi-grid">
+            <div class="skeleton skeleton-kpi"></div>
+            <div class="skeleton skeleton-kpi"></div>
+            <div class="skeleton skeleton-kpi"></div>
+            <div class="skeleton skeleton-kpi"></div>
+          </div>
+
+          <div class="grid-2">
+            <div class="chart-card">
+              <h3>Monthly Income vs Expense</h3>
+              <div class="chart-canvas-wrap">
+                <canvas id="chart-monthly"></canvas>
+              </div>
+            </div>
+            <div class="chart-card">
+              <h3>Expense by Category</h3>
+              <div class="chart-canvas-wrap">
+                <canvas id="chart-category"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <div class="section-header" style="padding:16px;">
+              <h3 style="font-size:15px;margin:0;">Recent Transactions</h3>
+              <a href="#transactions" class="text-primary" style="font-size:13px;font-weight:600;">View all →</a>
+            </div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Date</th><th>Category</th><th>Type</th><th class="right">Amount</th>
+                </tr>
+              </thead>
+              <tbody id="recent-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============ TRANSACTIONS SECTION ============ -->
+        <section class="section hidden" id="section-transactions" data-section="transactions">
+          <div class="section-header">
+            <h2>Transactions</h2>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-ghost" id="btn-export-csv">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                CSV
+              </button>
+              <button class="btn btn-ghost" id="btn-export-pdf">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                PDF
+              </button>
+              <button class="btn btn-primary" id="btn-add-tx">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                Add Transaction
+              </button>
+            </div>
+          </div>
+
+          <div class="filter-bar">
+            <div class="field">
+              <label>Type</label>
+              <select class="select" id="f-type">
+                <option value="">All</option>
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Category</label>
+              <select class="select" id="f-category">
+                <option value="">All</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Start date</label>
+              <input type="date" class="input" id="f-start" />
+            </div>
+            <div class="field">
+              <label>End date</label>
+              <input type="date" class="input" id="f-end" />
+            </div>
+            <div class="field">
+              <label>Search</label>
+              <input type="text" class="input" id="f-search" placeholder="Search…" />
+            </div>
+            <div class="filter-actions">
+              <button class="btn btn-primary" id="btn-apply-filter">Apply</button>
+              <button class="btn btn-ghost" id="btn-reset-filter">Reset</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Date</th><th>Category</th><th>Type</th>
+                  <th>Description</th><th class="right">Amount</th><th class="actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tx-body"></tbody>
+            </table>
+            <div id="tx-skeleton" class="hidden" style="padding:0;"></div>
+          </div>
+        </section>
+
+        <!-- ============ SETTINGS SECTION ============ -->
+        <section class="section hidden" id="section-settings" data-section="settings">
+          <div class="section-header">
+            <h2>Settings</h2>
+          </div>
+
+          <div class="grid-2">
+            <div class="card no-hover">
+              <div class="card-title">Appearance</div>
+              <div class="flex-between">
+                <div>
+                  <div style="font-weight:600;">Dark mode</div>
+                  <div class="text-muted" style="font-size:13px;">Toggle between light and dark theme</div>
+                </div>
+                  <button class="btn btn-ghost" id="btn-theme-toggle">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg>
+                  Toggle Theme
+                </button>
+              </div>
+            </div>
+
+            <div class="card no-hover">
+              <div class="card-title">Account</div>
+              <div class="flex-between" style="margin-bottom:12px;">
+                <span class="text-muted">Username</span>
+                <span id="acc-username" style="font-weight:600;">—</span>
+              </div>
+              <div class="flex-between" style="margin-bottom:12px;">
+                <span class="text-muted">User ID</span>
+                <span id="acc-userid" style="font-weight:600;">—</span>
+              </div>
+              <div class="flex-between">
+                <span class="text-muted">Member since</span>
+                <span id="acc-created" style="font-weight:600;">—</span>
+              </div>
+            </div>
+
+            <div class="card no-hover">
+              <div class="card-title">Change Password</div>
+              <div class="field">
+                <label>Old password</label>
+                <input type="password" class="input" id="pw-old" />
+              </div>
+              <div class="field">
+                <label>New password</label>
+                <input type="password" class="input" id="pw-new" />
+              </div>
+              <button class="btn btn-primary" id="btn-change-pw">Update Password</button>
+            </div>
+
+            <div class="card no-hover">
+              <div class="card-title">Danger Zone</div>
+              <p class="text-muted" style="font-size:13px;margin-bottom:12px;">Clear local session and log out of your account.</p>
+              <button class="btn btn-danger" id="btn-logout-settings">Logout</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/icons.js"></script>
+  <script src="/static/js/layout.js"></script>
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

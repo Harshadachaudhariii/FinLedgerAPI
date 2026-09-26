@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FinLedger — Summary</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>" />
+  <link rel="stylesheet" href="/static/css/base.css" />
+  <link rel="stylesheet" href="/static/css/components.css" />
+  <link rel="stylesheet" href="/static/css/layout.css" />
+  <script src="/static/js/theme.js"></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand"><div class="brand-mark">💰</div><span>FinLedger</span></div>
+      <nav class="sidebar-nav" id="sidebar-nav"></nav>
+      <div class="sidebar-footer">v2.0.0 • © FinLedger</div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="hamburger" id="hamburger" aria-label="Menu"></button>
+          <div class="page-title" id="page-title">Summary</div>
+        </div>
+        <div class="topbar-right">
+            <button class="topbar-btn" data-theme-toggle aria-label="Toggle theme"></button>
+          <div class="user-chip" id="user-chip"><div class="avatar">?</div></div>
+            <button class="topbar-btn" id="logout-btn" title="Logout" aria-label="Logout"></button>
+        </div>
+      </header>
+
+      <main class="content">
+        <div class="section-header">
+          <h2>Summary</h2>
+        </div>
+
+        <div class="filter-bar">
+          <div class="field">
+            <label>Start date</label>
+            <input type="date" class="input" id="s-start" />
+          </div>
+          <div class="field">
+            <label>End date</label>
+            <input type="date" class="input" id="s-end" />
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-primary" id="s-apply">Apply</button>
+            <button class="btn btn-ghost" id="s-reset">Reset</button>
+          </div>
+        </div>
+
+        <div class="grid-kpi" id="s-kpis">
+          <div class="skeleton skeleton-kpi"></div>
+          <div class="skeleton skeleton-kpi"></div>
+          <div class="skeleton skeleton-kpi"></div>
+        </div>
+
+        <div class="card no-hover" style="margin-bottom:24px;">
+          <div class="card-title">Monthly Breakdown</div>
+          <div class="table-wrap" style="border:none;box-shadow:none;">
+            <table class="table">
+              <thead>
+                <tr><th>Month</th><th class="right">Income</th><th class="right">Expense</th><th class="right">Net</th><th class="right">Txns</th></tr>
+              </thead>
+              <tbody id="s-monthly"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card no-hover">
+          <div class="card-title">Category Breakdown</div>
+          <div class="table-wrap" style="border:none;box-shadow:none;">
+            <table class="table">
+              <thead>
+                <tr><th>Category</th><th class="right">Amount</th><th class="right">% of Total</th></tr>
+              </thead>
+              <tbody id="s-cat"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/icons.js"></script>
+  <script src="/static/js/layout.js"></script>
+  <script src="/static/js/summary.js"></script>
+</body>
+</html>
