@@ -4,10 +4,12 @@ from typing import Optional
 from fastapi.responses import JSONResponse
 from app.utils.data import load_data, save_data
 from app.model.budget import *
-from app.enums.budget import BudgetStatusType, TransactionCategory
+from app.enums.budget import BudgetStatusType
+from app.enums.transaction import TransactionCategory 
 from app.utils.security import get_current_user
 from app.utils.logger import logger
 from datetime import datetime
+from app.enums.transaction import TransactionCategory
 
 router = APIRouter()    
 
@@ -69,32 +71,6 @@ def get_budgets(user_id: str = Depends(get_current_user), month: Optional[str] =
         return budgets
     except Exception:
         logger.exception("Failed to fetch budgets for user %s", user_id)
-        raise
-
-@router.get("/{budget_id}", tags=["Budgets"])
-def get_single_budget(budget_id: str,current_user_id: str = Depends(get_current_user)):
-    logger.info("Fetching budget: %s for user: %s",budget_id,current_user_id)
-
-    try:
-        data = load_data()
-        budget = data.get("budgets", {}).get(budget_id)
-
-        if not budget:
-            logger.warning("Budget not found: %s for user: %s",budget_id,current_user_id)
-            raise HTTPException(status_code=404,detail="Budget not found")
-
-        if budget.get("user_id") != current_user_id:
-            logger.warning("Unauthorized budget access attempt: budget=%s | user=%s",budget_id,current_user_id)
-            raise HTTPException(status_code=404,detail="Budget not found")
-
-        logger.info("Budget retrieved successfully: %s for user: %s",budget_id,current_user_id)
-        return budget
-
-    except HTTPException:
-        raise
-
-    except Exception:
-        logger.exception("Failed to retrieve budget: %s for user: %s",budget_id,current_user_id)
         raise
 
 @router.get("/status", tags=["Budgets"])
@@ -160,12 +136,14 @@ def get_budget_status(user_id: str = Depends(get_current_user),month: Optional[s
     except Exception:
         logger.exception("Failed to retrieve budget status for user: %s | month=%s",user_id,month)
         raise
-            
+
 @router.post("/create")
 def create_budget(budget: BudgetCreate, user_id: str = Depends(get_current_user)):
     try:
         data = load_data()
         for budget_id, budget_info in data["budgets"].items():
+            if budget_info.get("deleted_at"):
+                continue
             if (
                 budget_info["user_id"] == user_id
                 and budget_info["category"] == budget.category
@@ -176,6 +154,7 @@ def create_budget(budget: BudgetCreate, user_id: str = Depends(get_current_user)
         budget_id = generate_budget_id(data,user_id)
         budget_data = budget.model_dump(mode="json", exclude_unset=True)
         budget_data["user_id"] = user_id
+        budget_data["created_at"] = date.today().isoformat()  # <-- Added this line
         data["budgets"][budget_id] = budget_data
         save_data(data)
         logger.info("Budget created successfully for user %s with ID %s", user_id, budget_id)
@@ -185,7 +164,7 @@ def create_budget(budget: BudgetCreate, user_id: str = Depends(get_current_user)
     except Exception:
         logger.exception("Unexpected error while creating budget for user %s", user_id)
         raise
-
+            
 @router.put("/update/{budget_id}")
 def update_budget(budget_id: str, budget_update: BudgetUpdate, user_id: str = Depends(get_current_user)):
     try:
@@ -199,6 +178,11 @@ def update_budget(budget_id: str, budget_update: BudgetUpdate, user_id: str = De
         if data["budgets"][budget_id]["user_id"] != user_id:
             logger.warning("Budget update forbidden for user %s on budget %s", user_id, budget_id)
             raise HTTPException(status_code=403, detail="You haven't ownership to this budgets")
+            
+        # NEW: Check if soft-deleted
+        if data["budgets"][budget_id].get("deleted_at"):
+            logger.warning("User %s tried to update deleted budget %s", user_id, budget_id)
+            raise HTTPException(status_code=404, detail="Budget not found")
         existing_budget_info = data["budgets"][budget_id]
         update_budgets_info = budget_update.model_dump(mode="json", exclude_unset=True)
         existing_budget_info.update(update_budgets_info)
@@ -228,6 +212,10 @@ def delete_budget(budget_id: str, user_id:str=Depends(get_current_user)):
             logger.warning("Budget delete forbidden for user %s on budget %s", user_id, budget_id)
             raise HTTPException(status_code=403, detail="You don't have ownership of this budgets")
 
+        if data["budgets"][budget_id].get("deleted_at"):
+            logger.warning("Budget already deleted: %s for user %s", budget_id, user_id)
+            raise HTTPException(status_code=404, detail="Budget not found")
+
         data["budgets"][budget_id]["deleted_at"] = datetime.now().isoformat()
 
         save_data(data)
@@ -240,3 +228,32 @@ def delete_budget(budget_id: str, user_id:str=Depends(get_current_user)):
         logger.exception("Unexpected error while deleting budget %s for user %s", budget_id, user_id)
         raise
         
+@router.get("/{budget_id}", tags=["Budgets"])
+def get_single_budget(budget_id: str,current_user_id: str = Depends(get_current_user)):
+    logger.info("Fetching budget: %s for user: %s",budget_id,current_user_id)
+
+    try:
+        data = load_data()
+        budget = data.get("budgets", {}).get(budget_id)
+
+        if not budget:
+            logger.warning("Budget not found: %s for user: %s",budget_id,current_user_id)
+            raise HTTPException(status_code=404,detail="Budget not found")
+
+        if budget.get("user_id") != current_user_id:
+            logger.warning("Unauthorized budget access attempt: budget=%s | user=%s",budget_id,current_user_id)
+            raise HTTPException(status_code=404,detail="Budget not found")
+
+        if budget.get("deleted_at"):
+            logger.warning("Deleted budget access attempt: budget=%s | user=%s",budget_id,current_user_id)
+            raise HTTPException(status_code=404,detail="Budget not found")
+
+        logger.info("Budget retrieved successfully: %s for user: %s",budget_id,current_user_id)
+        return budget
+
+    except HTTPException:
+        raise
+
+    except Exception:
+        logger.exception("Failed to retrieve budget: %s for user: %s",budget_id,current_user_id)
+        raise

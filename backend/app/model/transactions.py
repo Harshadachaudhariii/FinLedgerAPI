@@ -15,6 +15,8 @@ class Transaction(BaseModel):
     payment_method: TransactionPaymentMethod=None
     status: Optional[TransactionStatus]=None
     notes:Optional[str]=None
+    is_recurring: bool = False
+    recurrence_day: Optional[int] = None
     
 class TransactionUpdate(BaseModel):
     type: Optional[Literal["income", "expense"]]=Field(None, description="Type of transaction: income or expense")
@@ -27,3 +29,5 @@ class TransactionUpdate(BaseModel):
     payment_method: Optional[TransactionPaymentMethod] =None
     status: Optional[TransactionStatus]=None
     notes:Optional[str]=None
+    is_recurring: Optional[bool] = False
+    recurrence_day: Optional[int] = None

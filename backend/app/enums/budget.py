@@ -5,17 +5,3 @@ class BudgetStatusType(str, Enum):
     WARNING="warning"
     EXCEEDED= "exceeded"
     
-class TransactionCategory(str, Enum):
-    FOOD="Food"
-    TRANSPORT="Transport"
-    SALARY="Salary"
-    RENT ="Rent"
-    UTILITIES="Utilities"
-    ENTERTAINMENT="Entertainment"
-    HEALTH="Health"
-    FREELANCE="Freelance"
-    GIFT="Gift"
-    SHOPPING="Shopping"
-    BONUS="Bonus"
-    EDUCATION="Education"
-    OTHER="Other"

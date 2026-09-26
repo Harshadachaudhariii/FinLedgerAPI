@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from app.utils.data import load_data, save_data
 from app.utils.security import get_current_user
 from app.utils.logger import logger
+from app.enums.transaction import TransactionCategory
 
 router = APIRouter()
 
@@ -91,15 +92,10 @@ def daily_average_spent(start_date: Optional[date] = Query(None,
 
 @router.get("/month-over-month")
 def month_over_month_comparing(
-    target_month: Optional[str] = Query(
-        None,
-        description="Target month in YYYY-MM format"
-    ),
-    user_id: str = Depends(get_current_user)
-):
+    target_month: Optional[str] = Query(None,description="Target month in YYYY-MM format"),
+    user_id: str = Depends(get_current_user)):
     try:
         data = load_data()
-
         # 1. Set target month
         if target_month is None:
             target_month = date.today().strftime("%Y-%m")

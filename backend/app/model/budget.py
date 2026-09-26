@@ -2,7 +2,7 @@ from typing import Optional, Annotated, List,Literal
 from pydantic import BaseModel, Field
 from app.enums.budget import *
 from datetime import date
-
+from app.enums.transaction import TransactionCategory
 
 class BudgetCreate(BaseModel):
     category:Annotated[TransactionCategory, Field(..., description="Category of transaction")]

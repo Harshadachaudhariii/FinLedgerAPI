@@ -2,7 +2,7 @@
     "users": {
         "u_001": {
             "username": "alice_finance",
-            "password": "$2b$12$dTeHmMx.Qy2pdCKgTL3FpuQdaRW8chDlrmPb1L6.nCy.GKdcGrbyC",
+            "password": "$2b$12$SBb6wOVKUvqNKkReNj6yY.rAh/UnU8YosyFQjS.0xjw0VGUh6A3L.",
             "created_at": "2026-09-23"
         },
         "u_002": {
@@ -199,8 +199,8 @@
         "t_1014": {
             "user_id": "u_001",
             "type": "expense",
-            "category": "Education",
-            "amount": 120.0,
+            "category": "Pharmacy",
+            "amount": 2000.0,
             "currency": "Indian Rupees (INR)",
             "dates": "2026-09-20",
             "description": "Online course subscription; recorded as a education expense.",
@@ -663,8 +663,8 @@
         },
         "b_1002": {
             "user_id": "u_001",
-            "category": "Food",
-            "amount": 40000.0,
+            "category": "Shopping",
+            "amount": 1000.0,
             "period": "monthly",
             "month": "2026-09",
             "created_at": "2026-09-01"
@@ -672,7 +672,7 @@
         "b_1003": {
             "user_id": "u_001",
             "category": "Transport",
-            "amount": 100.0,
+            "amount": 1000.0,
             "period": "monthly",
             "month": "2026-09",
             "created_at": "2026-09-01"
@@ -704,7 +704,7 @@
         "b_1008": {
             "user_id": "u_001",
             "category": "Education",
-            "amount": 250.0,
+            "amount": 500.0,
             "period": "monthly",
             "month": "2026-09",
             "created_at": "2026-09-01"
@@ -779,6 +779,14 @@
             "amount": 7500.0,
             "month": "2026-09",
             "period": "monthly"
+        },
+        "b_3002": {
+            "category": "Food",
+            "amount": 700.0,
+            "month": "2026-09",
+            "period": "monthly",
+            "user_id": "u_003",
+            "deleted_at": "2026-09-25T01:44:42.844653"
         }
     }
 }
