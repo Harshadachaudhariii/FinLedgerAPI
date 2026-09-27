@@ -100,6 +100,15 @@
     return '';
   }
 
+  /* ---------- Password toggle icon ---------- */
+  function setPassToggleIcon(toggle, showingText) {
+    const iconName = showingText ? 'eyeOff' : 'eye';
+    if (window.Icons && Icons.render) {
+      toggle.innerHTML = Icons.render(iconName, { size: 18 });
+    }
+    toggle.setAttribute('aria-label', showingText ? 'Hide password' : 'Show password');
+  }
+
   /* ---------- Button loading ---------- */
   function setLoading(btn, loading) {
     if (!btn) return;
@@ -117,7 +126,8 @@
     }
     const el = document.createElement('div');
     el.className = `toast ${type}`;
-    const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
+    const iconName = type === 'success' ? 'check' : type === 'error' ? 'close' : 'info';
+    const icon = (window.Icons && Icons.render(iconName, { size: 14 })) || '';
     el.innerHTML = `
       <div class="toast-icon">${icon}</div>
       <div class="toast-msg">${escapeHtml(message)}</div>
@@ -149,10 +159,11 @@
     // Password show/hide
     const toggle = form.querySelector('[data-toggle-pass]');
     if (toggle) {
+      setPassToggleIcon(toggle, false);
       toggle.addEventListener('click', () => {
         const isPw = passIn.type === 'password';
         passIn.type = isPw ? 'text' : 'password';
-        toggle.textContent = isPw ? '🙈' : '👁';
+        setPassToggleIcon(toggle, isPw);
       });
     }
 
@@ -193,10 +204,11 @@
 
     const toggle = form.querySelector('[data-toggle-pass]');
     if (toggle) {
+      setPassToggleIcon(toggle, false);
       toggle.addEventListener('click', () => {
         const isPw = passIn.type === 'password';
         passIn.type = isPw ? 'text' : 'password';
-        toggle.textContent = isPw ? '🙈' : '👁';
+        setPassToggleIcon(toggle, isPw);
       });
     }
 

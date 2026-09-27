@@ -22,8 +22,6 @@
       // If Icons is not loaded yet, fall back to text emoji
       if (window.Icons && Icons.render) {
         btn.innerHTML = Icons.render(iconName, { size: 20 });
-      } else {
-        btn.textContent = t === 'dark' ? '☀️' : '🌙';
       }
       btn.setAttribute('aria-label', t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
     });
@@ -56,8 +54,6 @@
       const t = currentTheme();
       if (window.Icons && Icons.render) {
         btn.innerHTML = Icons.render(t === 'dark' ? 'sun' : 'moon', { size: 20 });
-      } else {
-        btn.textContent = t === 'dark' ? '☀️' : '🌙';
       }
     });
   });

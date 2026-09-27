@@ -59,45 +59,76 @@
     kpiGrid.innerHTML = UI.skeletonKPIs(4);
     recentBody.innerHTML = `<tr><td colspan="4"><div class="skeleton skeleton-line" style="margin:12px 0;"></div></td></tr>`;
 
-    let dashboard = null, monthly = null, byCat = null, overview = null;
+    let dashboard = null, monthly = null, byCat = null, overview = null, budgetsRes = null;
     try {
-      [dashboard, monthly, byCat, overview] = await Promise.all([
+      const results = await Promise.allSettled([
         API.get('/transactions/dashboard'),
         API.get('/transactions/summary/monthly'),
         API.get('/transactions/summary/by-category'),
-        API.get('/transactions/summary/overview')
+        API.get('/transactions/summary/overview'),
+        API.get(`/api/budgets/status?month=${UI.currentMonth()}`)
       ]);
+      if (results[0].status !== 'fulfilled') throw results[0].reason;
+      if (results[1].status !== 'fulfilled') throw results[1].reason;
+      if (results[2].status !== 'fulfilled') throw results[2].reason;
+      if (results[3].status !== 'fulfilled') throw results[3].reason;
+      dashboard = results[0].value;
+      monthly   = results[1].value;
+      byCat     = results[2].value;
+      overview  = results[3].value;
+      budgetsRes = results[4].status === 'fulfilled' ? results[4].value : null;
     } catch (e) {
       kpiGrid.innerHTML = `<div class="card no-hover">Failed to load: ${UI.escapeHtml(e.message)}</div>`;
       return;
     }
 
     const currency = overview.currency || 'INR';
+    const months = monthly.monthly_summary || [];
+    const sparkIncome  = spark(months.map(m => m.income),      'var(--income)');
+    const sparkExpense = spark(months.map(m => m.expense),     'var(--expense)');
+    const sparkNet     = spark(months.map(m => m.net_balance), 'var(--primary)');
+    const sparkMonth   = spark(months.map(m => m.net_balance), 'var(--warning)');
 
         kpiGrid.innerHTML = `
-      <div class="kpi">
-        <div class="kpi-label">Total Income</div>
-        <div class="kpi-value income" data-kpi="income">${UI.formatMoney(0, currency)}</div>
-        <div class="kpi-sub">All-time earnings</div>
-        <div class="kpi-icon income">${UI.icon('arrowUp', 20)}</div>
+      <div class="stat-card income">
+        <div class="stat-top">
+          <div class="stat-avatar soft">${UI.icon('arrowUp', 20)}</div>
+          <div class="stat-spark">${sparkIncome}</div>
+        </div>
+        <div class="stat-body">
+          <div class="stat-value" data-kpi="income">${UI.formatMoney(0, currency)}</div>
+          <div class="stat-label">Total Income · All-time earnings</div>
+        </div>
       </div>
-      <div class="kpi">
-        <div class="kpi-label">Total Expense</div>
-        <div class="kpi-value expense" data-kpi="expense">${UI.formatMoney(0, currency)}</div>
-        <div class="kpi-sub">All-time spending</div>
-        <div class="kpi-icon expense">${UI.icon('arrowDown', 20)}</div>
+      <div class="stat-card expense">
+        <div class="stat-top">
+          <div class="stat-avatar soft">${UI.icon('arrowDown', 20)}</div>
+          <div class="stat-spark">${sparkExpense}</div>
+        </div>
+        <div class="stat-body">
+          <div class="stat-value" data-kpi="expense">${UI.formatMoney(0, currency)}</div>
+          <div class="stat-label">Total Expense · All-time spending</div>
+        </div>
       </div>
-      <div class="kpi">
-        <div class="kpi-label">Net Balance</div>
-        <div class="kpi-value primary" data-kpi="net">${UI.formatMoney(0, currency)}</div>
-        <div class="kpi-sub">Income − Expense</div>
-        <div class="kpi-icon bare rupee">${UI.icon('rupee', 28)}</div>
+      <div class="stat-card primary">
+        <div class="stat-top">
+          <div class="stat-avatar">${UI.icon('rupee', 20)}</div>
+          <div class="stat-spark">${sparkNet}</div>
+        </div>
+        <div class="stat-body">
+          <div class="stat-value" data-kpi="net">${UI.formatMoney(0, currency)}</div>
+          <div class="stat-label">Net Balance · Income − Expense</div>
+        </div>
       </div>
-      <div class="kpi">
-        <div class="kpi-label">This Month</div>
-        <div class="kpi-value" data-kpi="month">${UI.formatMoney(0, currency)}</div>
-        <div class="kpi-sub">Net balance this month</div>
-        <div class="kpi-icon warning">${UI.icon('calendar', 20)}</div>
+      <div class="stat-card warning">
+        <div class="stat-top">
+          <div class="stat-avatar soft">${UI.icon('calendar', 20)}</div>
+          <div class="stat-spark">${sparkMonth}</div>
+        </div>
+        <div class="stat-body">
+          <div class="stat-value" data-kpi="month">${UI.formatMoney(0, currency)}</div>
+          <div class="stat-label">This Month · Net balance</div>
+        </div>
       </div>
     `;
 
@@ -136,8 +167,46 @@
     }
 
     // --- CHARTS ---
-    renderMonthlyChart(monthly.monthly_summary || [], currency);
+    renderMonthlyChart(months, currency);
     renderCategoryChart(byCat.breakdown || [], currency);
+    renderBudgetMini(budgetsRes?.budgets_status || []);
+  }
+
+  function spark(values, color) {
+    const vals = (values || []).filter(v => typeof v === 'number');
+    if (vals.length < 2) return '';
+    const w = 64, h = 26, pad = 2;
+    const min = Math.min(...vals), max = Math.max(...vals);
+    const range = (max - min) || 1;
+    const pts = vals.map((v, i) => {
+      const x = pad + (i / (vals.length - 1)) * (w - pad * 2);
+      const y = h - pad - ((v - min) / range) * (h - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" fill="none">
+      <polyline points="${pts.join(' ')}" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+  }
+
+  function renderBudgetMini(items) {
+    const el = document.getElementById('budget-mini');
+    if (!el) return;
+    if (!items.length) {
+      el.innerHTML = `<div class="empty" style="padding:28px 0;">${UI.icon('folder', 44)}<p style="margin-top:8px;">No budgets set for this month.</p></div>`;
+      return;
+    }
+    const top = items.slice(0, 5);
+    el.innerHTML = top.map(b => `
+      <div class="mini-bar-row">
+        <div class="mini-bar-label">
+          <span>${UI.escapeHtml(b.category)}</span>
+          <span class="pct ${b.status}">${b.percentage_used.toFixed(0)}%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill ${b.status}" style="width:${Math.min(100, b.percentage_used)}%"></div>
+        </div>
+      </div>
+    `).join('');
   }
 
   function renderMonthlyChart(data, currency) {
@@ -153,20 +222,28 @@
     const textColor = styles.getPropertyValue('--muted').trim();
     const borderColor = styles.getPropertyValue('--border').trim();
 
+    const incomeGrad = ctx.getContext('2d').createLinearGradient(0, 0, 0, 280);
+    incomeGrad.addColorStop(0, 'rgba(23,184,114,.32)');
+    incomeGrad.addColorStop(1, 'rgba(23,184,114,0)');
+    const expenseGrad = ctx.getContext('2d').createLinearGradient(0, 0, 0, 280);
+    expenseGrad.addColorStop(0, 'rgba(240,70,110,.26)');
+    expenseGrad.addColorStop(1, 'rgba(240,70,110,0)');
+
     chartMonthly = new Chart(ctx, {
-      type: 'bar',
+      type: 'line',
       data: {
         labels,
         datasets: [
-          { label: 'Income',  data: income,  backgroundColor: '#10b981', borderRadius: 6 },
-          { label: 'Expense', data: expense, backgroundColor: '#ef4444', borderRadius: 6 }
+          { label: 'Income',  data: income,  borderColor: '#17b872', backgroundColor: incomeGrad,  fill: true, tension: .42, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5 },
+          { label: 'Expense', data: expense, borderColor: '#f0466e', backgroundColor: expenseGrad, fill: true, tension: .42, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5 }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: { labels: { color: textColor, font: { family: 'Inter' } } },
+          legend: { labels: { color: textColor, font: { family: 'Inter' }, boxWidth: 10, usePointStyle: true, pointStyle: 'circle' } },
           tooltip: {
             callbacks: {
               label: c => `${c.dataset.label}: ${UI.formatMoney(c.parsed.y, currency)}`
@@ -186,6 +263,7 @@
 
   function renderCategoryChart(data, currency) {
     const ctx = document.getElementById('chart-category');
+    const legendEl = document.getElementById('category-legend');
     if (!ctx) return;
     if (chartCategory) chartCategory.destroy();
 
@@ -193,19 +271,20 @@
     const rest = data.slice(5);
     let labels = top.map(d => d.category);
     let values = top.map(d => d.amount);
+    let pcts = top.map(d => d.percentage);
     if (rest.length) {
       labels.push('Other');
       values.push(rest.reduce((s, d) => s + d.amount, 0));
+      pcts.push(rest.reduce((s, d) => s + (d.percentage || 0), 0));
     }
 
     if (!labels.length) {
       labels = ['No data'];
       values = [1];
+      pcts = [100];
     }
 
-    const palette = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#64748b'];
-    const styles = getComputedStyle(document.documentElement);
-    const textColor = styles.getPropertyValue('--muted').trim();
+    const palette = ['#6d5efc','#22d3ee','#17b872','#f5a524','#f0466e','#8b5cf6'];
 
     chartCategory = new Chart(ctx, {
       type: 'doughnut',
@@ -214,18 +293,19 @@
         datasets: [{
           data: values,
           backgroundColor: palette.slice(0, labels.length),
-          borderWidth: 0
+          borderWidth: 0,
+          hoverOffset: 10,
+          spacing: 2,
+          borderRadius: 4
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        cutout: '62%',
+        cutout: '68%',
+        animation: { animateRotate: true, animateScale: true },
         plugins: {
-          legend: {
-            position: 'bottom',
-            labels: { color: textColor, font: { family: 'Inter' }, boxWidth: 12, padding: 12 }
-          },
+          legend: { display: false },
           tooltip: {
             callbacks: {
               label: c => `${c.label}: ${UI.formatMoney(c.parsed, currency)}`
@@ -234,6 +314,17 @@
         }
       }
     });
+
+    if (legendEl) {
+      legendEl.innerHTML = labels.map((label, i) => `
+        <div class="legend-row">
+          <span class="dot" style="background:${palette[i % palette.length]}"></span>
+          <span class="legend-name">${UI.escapeHtml(label)}</span>
+          <span class="legend-amt">${UI.formatMoney(values[i], currency)}</span>
+          <span class="legend-pct">${(pcts[i] ?? 0).toFixed(0)}%</span>
+        </div>
+      `).join('');
+    }
   }
 
   /* ================= TRANSACTIONS ================= */

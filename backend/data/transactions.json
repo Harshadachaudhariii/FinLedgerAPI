@@ -31,7 +31,7 @@
             "user_id": "u_001",
             "type": "income",
             "category": "Salary",
-            "amount": 4500.0,
+            "amount": 45000.0,
             "currency": "Indian Rupees (INR)",
             "dates": "2026-09-01",
             "description": "Monthly salary; received as regular salary income.",
@@ -45,13 +45,15 @@
             "type": "expense",
             "category": "Rent",
             "amount": 1200.0,
-            "currency": "Indian Rupees (INR)",
+            "currency": "INR",
             "dates": "2026-09-02",
             "description": "Apartment rent; recorded as a rent expense.",
             "merchant": "Apartment Management",
             "payment_method": "UPI",
             "status": "completed",
-            "notes": "Expense transaction for rent category."
+            "notes": "Expense transaction for rent category.",
+            "is_recurring": true,
+            "recurrence_day": 1
         },
         "t_1003": {
             "user_id": "u_001",
@@ -96,7 +98,7 @@
             "user_id": "u_001",
             "type": "income",
             "category": "Freelance",
-            "amount": 300.0,
+            "amount": 20000.0,
             "currency": "Indian Rupees (INR)",
             "dates": "2026-09-10",
             "description": "Web design project; received as regular freelance income.",
@@ -187,7 +189,7 @@
             "user_id": "u_001",
             "type": "income",
             "category": "Bonus",
-            "amount": 250.0,
+            "amount": 10000.0,
             "currency": "Indian Rupees (INR)",
             "dates": "2026-09-20",
             "description": "Performance bonus; received as regular bonus income.",
@@ -239,7 +241,7 @@
             "user_id": "u_001",
             "type": "income",
             "category": "Freelance",
-            "amount": 450.0,
+            "amount": 4500.0,
             "currency": "Indian Rupees (INR)",
             "dates": "2026-09-20",
             "description": "Data analysis project; received as regular freelance income.",
@@ -787,6 +789,14 @@
             "period": "monthly",
             "user_id": "u_003",
             "deleted_at": "2026-09-25T01:44:42.844653"
+        },
+        "b_1009": {
+            "category": "Coffee Shops",
+            "amount": 50.0,
+            "month": "2026-09",
+            "period": "monthly",
+            "user_id": "u_001",
+            "created_at": "2026-09-26"
         }
     }
 }
