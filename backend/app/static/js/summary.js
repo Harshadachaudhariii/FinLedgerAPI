@@ -29,6 +29,8 @@
     expenseGrad.addColorStop(0, 'rgba(240,70,110,.30)');
     expenseGrad.addColorStop(1, 'rgba(240,70,110,0)');
 
+    const sparse = labels.length < 3;
+
     trendChart = new Chart(ctx, {
       type: 'line',
       data: {
@@ -36,11 +38,11 @@
         datasets: [
           {
             label: 'Income', data: income, borderColor: '#17b872', backgroundColor: incomeGrad,
-            fill: true, tension: .4, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5
+            fill: true, tension: sparse ? 0 : .4, pointRadius: sparse ? 5 : 0, pointBackgroundColor: '#17b872', pointHoverRadius: 6, borderWidth: 2.5
           },
           {
             label: 'Expense', data: expense, borderColor: '#f0466e', backgroundColor: expenseGrad,
-            fill: true, tension: .4, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5
+            fill: true, tension: sparse ? 0 : .4, pointRadius: sparse ? 5 : 0, pointBackgroundColor: '#f0466e', pointHoverRadius: 6, borderWidth: 2.5
           }
         ]
       },
@@ -53,7 +55,7 @@
           tooltip: { callbacks: { label: c => `${c.dataset.label}: ${UI.formatMoney(c.parsed.y, currency)}` } }
         },
         scales: {
-          x: { grid: { display: false } },
+          x: { grid: { display: false }, offset: sparse },
           y: { grid: { color: 'rgba(128,128,150,.12)' }, ticks: { callback: v => UI.formatMoney(v, currency) } }
         }
       }

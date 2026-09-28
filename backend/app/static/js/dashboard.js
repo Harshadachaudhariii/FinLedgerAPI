@@ -229,13 +229,15 @@
     expenseGrad.addColorStop(0, 'rgba(240,70,110,.26)');
     expenseGrad.addColorStop(1, 'rgba(240,70,110,0)');
 
+    const sparse = labels.length < 3;
+
     chartMonthly = new Chart(ctx, {
       type: 'line',
       data: {
         labels,
         datasets: [
-          { label: 'Income',  data: income,  borderColor: '#17b872', backgroundColor: incomeGrad,  fill: true, tension: .42, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5 },
-          { label: 'Expense', data: expense, borderColor: '#f0466e', backgroundColor: expenseGrad, fill: true, tension: .42, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5 }
+          { label: 'Income',  data: income,  borderColor: '#17b872', backgroundColor: incomeGrad,  fill: true, tension: sparse ? 0 : .42, pointRadius: sparse ? 5 : 0, pointBackgroundColor: '#17b872', pointBorderColor: 'var(--card)', pointBorderWidth: 2, pointHoverRadius: 6, borderWidth: 2.5 },
+          { label: 'Expense', data: expense, borderColor: '#f0466e', backgroundColor: expenseGrad, fill: true, tension: sparse ? 0 : .42, pointRadius: sparse ? 5 : 0, pointBackgroundColor: '#f0466e', pointBorderColor: 'var(--card)', pointBorderWidth: 2, pointHoverRadius: 6, borderWidth: 2.5 }
         ]
       },
       options: {
@@ -251,7 +253,7 @@
           }
         },
         scales: {
-          x: { ticks: { color: textColor }, grid: { display: false } },
+          x: { ticks: { color: textColor }, grid: { display: false }, offset: sparse },
           y: {
             ticks: { color: textColor, callback: v => UI.formatMoney(v, currency) },
             grid: { color: borderColor }
